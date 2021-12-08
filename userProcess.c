@@ -2,9 +2,8 @@
 #include <time.h>
 #include "config.h"
 
-
-void *masterBookStart(void *treadId)
+void *userStart(void *treadId)
 {
-  printf("Test creazione libro mastro\n");
+  printf("Test creazione processo utente\n");
   pthread_exit(NULL);
 }

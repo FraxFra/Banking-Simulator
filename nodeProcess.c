@@ -2,9 +2,8 @@
 #include <time.h>
 #include "config.h"
 
-
-void *masterBookStart(void *treadId)
+void *nodeStart(void *treadId)
 {
-  printf("Test creazione libro mastro\n");
+  printf("Test creazione processo nodo\n");
   pthread_exit(NULL);
 }
