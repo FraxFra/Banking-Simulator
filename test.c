@@ -50,7 +50,7 @@ void *masterProcess(void *treadId)
                 time = (double)(time_finish - time_start) / CLOCKS_PER_SEC;
                 sleep(1);
         }
-        return (void*) 1;
+        pthread_exit((void*) 1);
 }
 
 int main(int argc, char const *argv[])
@@ -81,7 +81,7 @@ fatto  2 lancio i processi appena ho tutti i requisiti
                 printf("%d\n", res);
                 sleep(1);
         }
-        printf("Il processo Master e terminato\n");
+        printf("Il processo Master e' terminato\n");
         //TODO: creazione file di log
         return 0;
 }
