@@ -25,18 +25,20 @@
 typedef struct _TransactionMaster
 {
     clock_t timestamp;
-    int sender;
-    int receiver;
+    pthread_t sender;
+    pthread_t receiver;
 } TransactionMaster;
 
 typedef struct _Transaction
 {
     clock_t timestamp;
-    int sender;
-    int receiver;
+    pthread_t sender;
+    pthread_t receiver;
     int qty;
     int reward;
 } Transaction;
+
+TransactionMaster*** transactions;
 
 //Inizio esecuzione e creazione processi
 void *masterProcess(void *threadId);
