@@ -14,5 +14,5 @@ void *masterBookStart(void *treadId)
 
                 i++;
         }
-        pthread_exit(NULL);
+        return (void*) 1;
 }

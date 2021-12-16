@@ -7,7 +7,7 @@ void *masterProcess(void *treadId)
 {
         int creationError;
         int i = 0;
-        int result = 0;
+        void* res = 0;
         double time_start = clock();
         double time_finish, time;
         pthread_t userProcess[SO_USERS_NUM];
@@ -40,10 +40,11 @@ void *masterProcess(void *treadId)
                 printf("Creazione libro mastro in errore\n");
                 exit(-1);
         }
+        pthread_join(masterBook[0], &res);
 
         time_finish = clock();
         time = (double)(time_finish - time_start) / CLOCKS_PER_SEC;
-        while(result == 0 && SO_SIM_SEC > time) //controllo del termine del tempo e della terminazione del processo libro mastro
+        while(res == 0 && SO_SIM_SEC > time) //controllo del termine del tempo e della terminazione del processo libro mastro
         {
                 time_finish = clock();
                 time = (double)(time_finish - time_start) / CLOCKS_PER_SEC;
@@ -68,12 +69,12 @@ fatto  2 lancio i processi appena ho tutti i requisiti
 
         printf("Creazione del processo Master\n");
         rc = pthread_create(&threads[0], NULL, masterProcess, &res); //Processo Master
-        pthread_join(threads[0], &res);
         if(rc)
         {
                 printf("ERROR; return code from pthread_create() is %d\n",rc);
                 exit(-1);
         }
+        pthread_join(threads[0], &res);
 
         while(res == 0) //il main non termina finche il processo master non termina
         {
