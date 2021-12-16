@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <time.h>
+#include <pthread.h>
 #include "config.h"
 
 void *userStart(void *treadId)
