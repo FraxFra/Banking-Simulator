@@ -12,13 +12,13 @@ void masterBookListener(int i, Transaction* t)
 
 void* masterBookStart(void *treadId)
 {
-        printf("Test creazione libro mastro\n");
+        printf("Creato libro mastro Id: %d\n", pthread_self());
 
-        transactions = (TransactionMaster***)malloc(sizeof(TransactionMaster**) * SO_REGISTRY_SIZE);
+        transactions = (Transaction***)malloc(sizeof(Transaction**) * SO_REGISTRY_SIZE);
         int i = 0;
         while(SO_REGISTRY_SIZE > i)
         {
-                transactions[i] = (TransactionMaster**)malloc(sizeof(TransactionMaster*) * SO_BLOCK_SIZE);
+                transactions[i] = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
                 //masterBookListener(i);
                 i++;
         }

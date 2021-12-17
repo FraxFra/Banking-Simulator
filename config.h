@@ -22,23 +22,26 @@
 #define SO_SIM_SEC 10
 #define SO_FRIENDS_NUM 10
 
-typedef struct _TransactionMaster
-{
-    clock_t timestamp;
-    pthread_t sender;
-    pthread_t receiver;
-} TransactionMaster;
-
 typedef struct _Transaction
 {
-    clock_t timestamp;
-    pthread_t sender;
-    pthread_t receiver;
-    int qty;
-    int reward;
+        clock_t timestamp;
+        pthread_t sender;
+        pthread_t receiver;
+        int qty;
+        int reward;
 } Transaction;
 
-TransactionMaster*** transactions;
+typedef struct _Log
+{
+        int reason;
+        //int*** balanceUsers
+        //int*** balanceNodes
+        //int nDeadUsers
+        //int nLibroMastroBlocks
+        //int** nTransactionPool
+} Log;
+
+Transaction*** transactions;
 
 //Inizio esecuzione e creazione processi
 void *masterProcess(void *threadId);

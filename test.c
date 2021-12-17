@@ -9,7 +9,8 @@ void *masterProcess(void *treadId)
         int i = 0;
         void* res = 0;
         double time_start = clock();
-        double time_finish, time;
+        double time_finish = 0.0;
+        double time = 0.0;
         pthread_t userProcess[SO_USERS_NUM];
         pthread_t nodeProcess[SO_NODES_NUM];
         pthread_t masterBook[1];
@@ -42,8 +43,6 @@ void *masterProcess(void *treadId)
         }
         pthread_join(masterBook[0], &res);
 
-        time_finish = clock();
-        time = (double)(time_finish - time_start) / CLOCKS_PER_SEC;
         while(res == 0 && SO_SIM_SEC > time) //controllo del termine del tempo e della terminazione del processo libro mastro
         {
                 time_finish = clock();
@@ -75,7 +74,6 @@ fatto  2 lancio i processi appena ho tutti i requisiti
                 exit(-1);
         }
         pthread_join(threads[0], &res);
-
         while(res == 0) //il main non termina finche il processo master non termina
         {
                 printf("%d\n", res);

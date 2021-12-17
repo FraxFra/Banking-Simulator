@@ -5,43 +5,70 @@
 #include <math.h>
 #include "config.h"
 
-int calcBalance(void *treadId)
+int calcBalance(pthread_t threadId)
 {
-        //leggo tutto il libro mastro(ciclo) e prendo tutte le qty delle transazioni
+        int amountTransactions = 0;
+        int i, j;
+
+        if(transactions != NULL)
+        {
+                for(i = 0; i < SO_REGISTRY_SIZE; i++)
+                {
+                        if(transactions[i] != NULL)
+                        {
+                                for(j = 0; j < SO_BLOCK_SIZE; j++)
+                                {
+                                        if(transactions[i][j] != NULL)
+                                        {
+                                                if(pthread_equal(transactions[i][j]->sender, (pthread_t)threadId))
+                                                {
+                                                        amountTransactions = amountTransactions - transactions[i][j]->qty - transactions[i][j]->reward;
+                                                }
+                                                else if(pthread_equal(transactions[i][j]->receiver, (pthread_t)threadId))
+                                                {
+                                                        amountTransactions = amountTransactions + transactions[i][j]->qty;
+                                                }
+                                        }
+                                }
+                        }
+                }
+        }
+        return SO_BUDGET_INIT + amountTransactions;
 }
 
 pthread_t findReceiver()
 {
-
+        //ricercare casualmente un utente a cui inviare il denaro (per ora NULL)
+        return (pthread_t)NULL;
 }
 
-int calcReward(int balance)
+int calcReward(int amount)
 {
-        return (balance * SO_REWARD) / 100;
+        return (amount * SO_REWARD) / 100;
 }
 
-Transaction* createTransaction(void *treadId, int balance)
+Transaction* createTransaction(void *threadId, int balance)
 {
-        int amount = rand() % balance + 2;
+        int amount = rand() % balance + 1;
         Transaction* t = (Transaction*)malloc(sizeof(Transaction));
         t->timestamp = clock();
         t->sender = pthread_self();
-        t->reward = calcReward(balance);
+        t->reward = calcReward(amount);
         t->qty = amount - t->reward;
         t->receiver = findReceiver();
         return t;
 }
 
-void *userStart(void *treadId)
+void *userStart(void *threadId)
 {
-        printf("Test creazione processo utente\n");
+        printf("Creato processo utente Id: %d\n", pthread_self());
         int actual_retry = 0;
         while(actual_retry <= SO_RETRY)
         {
-                int balance = calcBalance(treadId);
+                int balance = calcBalance(pthread_self());
                 if(balance >= 2)
                 {
-                        Transaction* t = createTransaction(treadId, balance);
+                        Transaction* t = createTransaction(threadId, balance);
                         //sceglie il node
                         //invia la transazione al node
                         //va in wait
