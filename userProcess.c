@@ -68,7 +68,7 @@ Transaction* createTransaction(void *threadId, int balance)
         return t;
 }
 
-void *userStart(void *threadId)
+void* userStart(void *threadId)
 {
         printf("Creato processo utente Id: %d\n", pthread_self());
         int actual_retry = 0;
@@ -78,16 +78,10 @@ void *userStart(void *threadId)
                 if(balance >= 2)
                 {
                         Transaction* t = createTransaction(threadId, balance);
-                        //sceglie il node
+                        pthread_t node = findNode();
                         //invia la transazione al node
-                        //va in wait
-                        //se l'esito è negativo actual_retry va incrementato e va ripetuta la stessa transazione
-                        sleep(20);
-                }
-                else
-                {
-                        //gestione del caso < 2
-                        //va in wait e il ciclo riparte da capo
+                        usleep((rand() % SO_MAX_TRANS_GEN_NSEC) + SO_MIN_TRANS_GEN_NSEC);
+                        //incrementare actual_retry in caso negativo
                 }
         }
         //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
