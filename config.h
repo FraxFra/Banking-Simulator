@@ -8,7 +8,7 @@
 #endif
 
 #define SO_USERS_NUM 10
-#define SO_NODES_NUM 8
+#define SO_NODES_NUM 5
 #define SO_REWARD 10
 #define SO_MIN_TRANS_GEN_NSEC 500000000
 #define SO_MAX_TRANS_GEN_NSEC 1000000000

@@ -20,11 +20,11 @@ int calcBalance(pthread_t threadId)
                                 {
                                         if(transactions[i][j] != NULL)
                                         {
-                                                if(pthread_equal(transactions[i][j]->sender, (pthread_t)threadId))
+                                                if(pthread_equal(transactions[i][j]->sender, threadId))
                                                 {
                                                         amountTransactions = amountTransactions - transactions[i][j]->qty - transactions[i][j]->reward;
                                                 }
-                                                else if(pthread_equal(transactions[i][j]->receiver, (pthread_t)threadId))
+                                                else if(pthread_equal(transactions[i][j]->receiver, threadId))
                                                 {
                                                         amountTransactions = amountTransactions + transactions[i][j]->qty;
                                                 }
@@ -38,8 +38,17 @@ int calcBalance(pthread_t threadId)
 
 pthread_t findReceiver()
 {
-        //ricercare casualmente un utente a cui inviare il denaro (per ora NULL)
-        return (pthread_t)NULL;
+        pthread_t res = pthread_self();
+        while(res == pthread_self())
+        {
+                res = (rand() % SO_USERS_NUM) + 3;
+        }
+        return res;
+}
+
+pthread_t findNode()
+{
+        return (rand() % SO_NODES_NUM) + SO_USERS_NUM + 4;
 }
 
 int calcReward(int amount)
@@ -73,6 +82,7 @@ void *userStart(void *threadId)
                         //invia la transazione al node
                         //va in wait
                         //se l'esito è negativo actual_retry va incrementato e va ripetuta la stessa transazione
+                        sleep(20);
                 }
                 else
                 {
