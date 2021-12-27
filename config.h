@@ -15,8 +15,8 @@
 #define SO_RETRY 4
 #define SO_TP_SIZE 6
 #define SO_BLOCK_SIZE 6
-#define SO_MIN_TRANS_PROC_NSEC 0.005
-#define SO_MAX_TRANS_PROC_NSEC 0.010
+#define SO_MIN_TRANS_PROC_NSEC 500000000
+#define SO_MAX_TRANS_PROC_NSEC 1000000000
 #define SO_REGISTRY_SIZE 50
 #define SO_BUDGET_INIT 100
 #define SO_SIM_SEC 10
@@ -41,7 +41,7 @@ typedef struct _Log
         //int** nTransactionPool
 } Log;
 
-Transaction*** transactions;
+Transaction*** masterBook;
 
 //Inizio esecuzione e creazione processi
 void *masterProcess(void *threadId);
