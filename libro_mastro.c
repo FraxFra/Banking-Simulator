@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
-#include <Windows.h>
-#include <winuser.h>
 #include "config.h"
 void masterBookListener(int i, Transaction* t)
 {
@@ -13,13 +11,13 @@ void masterBookListener(int i, Transaction* t)
 
 void* masterBookStart(void *treadId)
 {
-    printf("Creato libro mastro Id: %d\n", pthread_self());
+    printf("Creato libro mastro Id: %ld\n", pthread_self());
 
-    masterBook = (Transaction***)malloc(sizeof(Transaction**) * SO_REGISTRY_SIZE);
+    masterBookTransactions = (Transaction***)malloc(sizeof(Transaction**) * SO_REGISTRY_SIZE);
     int i = 0;
     while(SO_REGISTRY_SIZE > i)
     {
-        masterBook[i] = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
+        masterBookTransactions[i] = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
         //masterBookListener(i);
         i++;
     }

@@ -41,7 +41,7 @@ typedef struct _Log
         //int** nTransactionPool
 } Log;
 
-Transaction*** masterBook;
+Transaction*** masterBookTransactions;
 
 //Inizio esecuzione e creazione processi
 void *masterProcess(void *threadId);

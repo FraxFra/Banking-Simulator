@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <time.h>
 #include <pthread.h>
-#include <Windows.h>
-#include <winuser.h>
 #include "config.h"
 
 void *masterProcess(void *treadId)
@@ -50,7 +49,7 @@ void *masterProcess(void *treadId)
     {
         time_finish = clock();
         time = (double)(time_finish - time_start) / CLOCKS_PER_SEC;
-        Sleep(1);
+        sleep(1);
     }
     pthread_exit((void*) 1);
 }
@@ -79,8 +78,8 @@ fatto  2 lancio i processi appena ho tutti i requisiti
         pthread_join(threads[0], &res);
         while(res == 0) //il main non termina finche il processo master non termina
         {
-                printf("%d\n", res);
-                Sleep(1);
+                printf("%p\n", res);
+                sleep(1);
         }
         printf("Il processo Master e' terminato\n");
         //TODO: creazione file di log

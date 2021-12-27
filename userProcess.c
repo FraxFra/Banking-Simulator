@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 #include <pthread.h>
-#include <Windows.h>
-#include <winuser.h>
 #include "config.h"
 
 int calcBalance(pthread_t threadId)
@@ -11,23 +10,23 @@ int calcBalance(pthread_t threadId)
     int amountTransactions = 0;
     int i, j;
 
-    if(masterBook != NULL)
+    if(masterBookTransactions != NULL)
     {
         for(i = 0; i < SO_REGISTRY_SIZE; i++)
         {
-            if(masterBook[i] != NULL)
+            if(masterBookTransactions[i] != NULL)
             {
                 for(j = 0; j < SO_BLOCK_SIZE; j++)
                 {
-                    if(masterBook[i][j] != NULL)
+                    if(masterBookTransactions[i][j] != NULL)
                     {
-                        if(pthread_equal(masterBook[i][j]->sender, threadId))
+                        if(pthread_equal(masterBookTransactions[i][j]->sender, threadId))
                         {
-                                amountTransactions = amountTransactions - masterBook[i][j]->qty - masterBook[i][j]->reward;
+                                amountTransactions = amountTransactions - masterBookTransactions[i][j]->qty - masterBookTransactions[i][j]->reward;
                         }
-                        else if(pthread_equal(masterBook[i][j]->receiver, threadId))
+                        else if(pthread_equal(masterBookTransactions[i][j]->receiver, threadId))
                         {
-                                amountTransactions = amountTransactions + masterBook[i][j]->qty;
+                                amountTransactions = amountTransactions + masterBookTransactions[i][j]->qty;
                         }
                     }
                 }
@@ -72,7 +71,7 @@ Transaction* createTransaction(void *threadId, int balance)
 
 void* userStart(void *threadId)
 {
-    printf("Creato processo utente Id: %d\n", pthread_self());
+    printf("Creato processo utente Id: %ld\n", pthread_self());
     int actual_retry = 0;
     while(actual_retry <= SO_RETRY)
     {

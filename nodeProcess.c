@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 #include <pthread.h>
-#include <Windows.h>
-#include <winuser.h>
 #include "config.h"
 
 int getTransQtys(Transaction** transactionBlock)
@@ -42,11 +41,11 @@ int checkTransaction(Transaction* transaction)
     {
         for(; j < SO_REGISTRY_SIZE; j++)
         {
-            if(masterBook[i][j] != NULL)
+            if(masterBookTransactions[i][j] != NULL)
             {
-                if(masterBook[i][j]->timestamp == transaction->timestamp
-                   && masterBook[i][j]->sender == transaction->sender
-                   && masterBook[i][j]->receiver == transaction->receiver)
+                if(masterBookTransactions[i][j]->timestamp == transaction->timestamp
+                   && masterBookTransactions[i][j]->sender == transaction->sender
+                   && masterBookTransactions[i][j]->receiver == transaction->receiver)
                 {
                     return 0;
                 }
@@ -108,7 +107,7 @@ void userListener(Transaction** transactionPool)
 
 void *nodeStart(void *treadId)
 {
-    printf("Creato processo nodo Id: %d\n", pthread_self());
+    printf("Creato processo nodo Id: %ld\n", pthread_self());
     while(1)
     {
         Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
