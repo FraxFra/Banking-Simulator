@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
@@ -9,10 +10,10 @@ void masterBookListener(int i, Transaction* t)
 
 }
 
-void* masterBookStart(void *treadId)
+void* masterBookStart()
 {
-    printf("Creato libro mastro Id: %ld\n", pthread_self());
-
+    printf("Creato libro mastro Id: %d\n", getpid());
+/*
     masterBookTransactions = (Transaction***)malloc(sizeof(Transaction**) * SO_REGISTRY_SIZE);
     int i = 0;
     while(SO_REGISTRY_SIZE > i)
@@ -20,6 +21,6 @@ void* masterBookStart(void *treadId)
         masterBookTransactions[i] = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
         //masterBookListener(i);
         i++;
-    }
-    pthread_exit((void*) 1);
+    }*/
+    exit(1);
 }

@@ -10,7 +10,7 @@ int calcBalance(pthread_t threadId)
     int amountTransactions = 0;
     int i, j;
 
-    if(masterBookTransactions != NULL)
+    /*if(masterBookTransactions != NULL)
     {
         for(i = 0; i < SO_REGISTRY_SIZE; i++)
         {
@@ -32,7 +32,7 @@ int calcBalance(pthread_t threadId)
                 }
             }
         }
-    }
+    }*/
     return SO_BUDGET_INIT + amountTransactions;
 }
 
@@ -69,10 +69,10 @@ Transaction* createTransaction(void *threadId, int balance)
 
 }
 
-void* userStart(void *threadId)
+void* userStart()
 {
-    printf("Creato processo utente Id: %ld\n", pthread_self());
-    int actual_retry = 0;
+    printf("Creato processo utente Id: %d\n", getpid());
+    /*int actual_retry = 0;
     while(actual_retry <= SO_RETRY)
     {
         int balance = calcBalance(pthread_self());
@@ -84,7 +84,7 @@ void* userStart(void *threadId)
                 usleep((rand() % SO_MAX_TRANS_GEN_NSEC) + SO_MIN_TRANS_GEN_NSEC);
                 //incrementare actual_retry in caso negativo
         }
-    }
+    }*/
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
-    pthread_exit(NULL);
+    exit(1);
 }

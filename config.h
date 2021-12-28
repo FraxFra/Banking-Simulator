@@ -41,19 +41,19 @@ typedef struct _Log
         //int** nTransactionPool
 } Log;
 
-Transaction*** masterBookTransactions;
+Transaction*** masterBookRegistry;
 
 //Inizio esecuzione e creazione processi
-void *masterProcess(void *threadId);
+void *masterStart();
 
 //Routine utenti
-void *userStart(void *threadId);
+void *userStart();
 
 //Routine nodi
-void *nodeStart(void *threadId);
+void *nodeStart();
 
 //Routine masterBook
-void *masterBookStart(void *threadId);
+void *masterBookStart();
 
 
 #endif

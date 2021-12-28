@@ -41,7 +41,7 @@ int checkTransaction(Transaction* transaction)
     {
         for(; j < SO_REGISTRY_SIZE; j++)
         {
-            if(masterBookTransactions[i][j] != NULL)
+            /*if(masterBookTransactions[i][j] != NULL)
             {
                 if(masterBookTransactions[i][j]->timestamp == transaction->timestamp
                    && masterBookTransactions[i][j]->sender == transaction->sender
@@ -49,7 +49,7 @@ int checkTransaction(Transaction* transaction)
                 {
                     return 0;
                 }
-            }
+            }*/
         }
     }
 
@@ -105,10 +105,10 @@ void userListener(Transaction** transactionPool)
 }
 
 
-void *nodeStart(void *treadId)
+void *nodeStart()
 {
-    printf("Creato processo nodo Id: %ld\n", pthread_self());
-    while(1)
+    printf("Creato processo nodo Id: %d\n", getpid());
+    /*while(1)
     {
         Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
         userListener(transactionPool);
@@ -116,6 +116,6 @@ void *nodeStart(void *treadId)
         //spedisce il blocco al libro mastro
 
         free(transactionPool);
-    }
-    pthread_exit(NULL);
+    }*/
+    exit(1);
 }
