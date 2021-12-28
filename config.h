@@ -19,7 +19,7 @@
 #define SO_MAX_TRANS_PROC_NSEC 1000000000
 #define SO_REGISTRY_SIZE 50
 #define SO_BUDGET_INIT 100
-#define SO_SIM_SEC 10
+#define SO_SIM_SEC 4
 #define SO_FRIENDS_NUM 10
 
 typedef struct _Transaction
@@ -41,19 +41,19 @@ typedef struct _Log
         //int** nTransactionPool
 } Log;
 
-Transaction*** masterBookRegistry;
+extern Transaction*** masterBookRegistry;
 
 //Inizio esecuzione e creazione processi
-void *masterStart();
+extern void *masterStart();
 
 //Routine utenti
-void *userStart();
+extern void *userStart();
 
 //Routine nodi
-void *nodeStart();
+extern void *nodeStart();
 
 //Routine masterBook
-void *masterBookStart();
+extern void *masterBookStart();
 
 
 #endif

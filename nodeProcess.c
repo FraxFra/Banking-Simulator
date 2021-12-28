@@ -117,5 +117,5 @@ void *nodeStart()
 
         free(transactionPool);
     }*/
-    exit(1);
+    exit(EXIT_SUCCESS);
 }

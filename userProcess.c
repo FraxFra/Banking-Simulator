@@ -86,5 +86,5 @@ void* userStart()
         }
     }*/
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
-    exit(1);
+    exit(EXIT_SUCCESS);
 }

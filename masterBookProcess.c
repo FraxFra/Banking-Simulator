@@ -22,5 +22,5 @@ void* masterBookStart()
         //masterBookListener(i);
         i++;
     }*/
-    exit(1);
+    exit(EXIT_SUCCESS);
 }
