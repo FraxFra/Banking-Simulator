@@ -1,8 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
-#include <pthread.h>
 #include "config.h"
 
 int getTransQtys(Transaction** transactionBlock)
@@ -107,15 +102,22 @@ void userListener(Transaction** transactionPool)
 
 void *nodeStart()
 {
-    printf("Creato processo nodo Id: %d\n", getpid());
-    /*while(1)
+    pid_t nodePid = getpid();
+    printf("Creato processo nodo Id: %d\n", nodePid);
+
+    int msgid = msgget(nodePid, IPC_CREAT | S_IRUSR | S_IWUSR);
+    printf("%d nodo\n", msgid);
+    while(1)
     {
-        Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
+        sleep(2);
+        //Transaction* t = (Transaction*)malloc(sizeof(Transaction));
+        //int a = msgrcv(msgget(1, IPC_CREAT | S_IRUSR | S_IWUSR), &t, sizeof(Transaction), 0, IPC_NOWAIT);
+        /*Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
         userListener(transactionPool);
         usleep((rand() % SO_MAX_TRANS_PROC_NSEC) + SO_MIN_TRANS_PROC_NSEC);
         //spedisce il blocco al libro mastro
 
-        free(transactionPool);
-    }*/
+        free(transactionPool);*/
+    }
     exit(EXIT_SUCCESS);
 }

@@ -1,4 +1,13 @@
 #include <time.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/msg.h>
+#include <sys/wait.h>
+#include <pthread.h>
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
@@ -24,24 +33,33 @@
 
 typedef struct _Transaction
 {
-        clock_t timestamp;
-        pthread_t sender;
-        pthread_t receiver;
-        int qty;
-        int reward;
+    clock_t timestamp;
+    pid_t sender;
+    pid_t receiver;
+    int qty;
+    int reward;
 } Transaction;
+
+typedef struct _messageUser
+{
+    long mtype;
+    Transaction* t;
+}messageUser;
 
 typedef struct _Log
 {
-        int reason;
-        //int*** balanceUsers
-        //int*** balanceNodes
-        //int nDeadUsers
-        //int nLibroMastroBlocks
-        //int** nTransactionPool
+    int reason;
+    //int*** balanceUsers
+    //int*** balanceNodes
+    //int nDeadUsers
+    //int nLibroMastroBlocks
+    //int** nTransactionPool
 } Log;
 
 extern Transaction*** masterBookRegistry;
+extern pid_t** usersProcesses;
+extern pid_t** nodeProcesses;
+extern pid_t* masterBookProcId;
 
 //Inizio esecuzione e creazione processi
 extern void *masterStart();
