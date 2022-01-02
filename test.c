@@ -1,22 +1,63 @@
 #include "config.h"
 
-pid_t** usersProcesses;
-pid_t** nodeProcesses;
-pid_t* masterBookProcId;
-Transaction*** masterBookRegistry;
+volatile Transaction** masterBookRegistry;
+volatile pid_t* userProcesses;
+volatile pid_t* nodeProcesses;
+volatile pid_t* masterBookProcess;
+
+void allocUserProcesses()
+{
+    int i = 0;
+    userProcesses = mmap(NULL, SO_USERS_NUM * sizeof(pid_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!userProcesses)
+    {
+        perror("la mappatura dei pid utente e' fallita");
+        exit(1);
+    }
+}
+
+void allocNodeProcesses()
+{
+    nodeProcesses = mmap(NULL, SO_NODES_NUM * sizeof(pid_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!nodeProcesses)
+    {
+        perror("la mappatura dei pid nodo e' fallita");
+        exit(1);
+    }
+}
+
+void allocMasterBookProcess()
+{
+    masterBookProcess = mmap(NULL, sizeof(pid_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!masterBookProcess)
+    {
+        perror("la mappatura del pid masterBook e' fallita");
+        exit(1);
+    }
+}
+
+void allocMasterBookRegistry()
+{
+    masterBookRegistry = mmap(NULL, SO_REGISTRY_SIZE * SO_BLOCK_SIZE * sizeof(Transaction), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); //non testato
+    if(!masterBookRegistry)
+    {
+        perror("la mappatura del masterBookRegistry e' fallita");
+        exit(1);
+    }
+}
 
 void *masterStart()
 {
-    printf("Creato processo master: %d\n", getpid());
-    int i = 0;
-    int status;
-    pid_t pid;
     pid_t masterPid = getpid();
-    int wd;
+    printf("Creato processo master: %d\n", masterPid);
 
-    usersProcesses = (pid_t**)malloc(sizeof(pid_t*) * SO_USERS_NUM);
-    nodeProcesses = (pid_t**)malloc(sizeof(pid_t*) * SO_NODES_NUM);
-    masterBookProcId = (pid_t*)malloc(sizeof(pid_t));
+    int i = 0;
+    pid_t pid;
+
+    allocUserProcesses();
+    allocNodeProcesses();
+    allocMasterBookProcess();
+    allocMasterBookRegistry();
 
     for(i = 0; i < SO_USERS_NUM; i++)
     {
@@ -30,9 +71,7 @@ void *masterStart()
             }
             else if(pid == 0)
             {
-                usersProcesses[i] = (pid_t*)malloc(sizeof(pid_t));
-                *usersProcesses[i] = getpid();
-                //printf("%d\n", *usersProcesses[i]);
+                userProcesses[i] = getpid();
                 userStart();
                 //TODO: alla exit() di tutti gli utenti deve corrispondere una terminazione della simulazione
             }
@@ -51,8 +90,7 @@ void *masterStart()
             }
             else if(pid == 0)
             {
-                nodeProcesses[i] = (pid_t*)malloc(sizeof(pid_t));
-                *nodeProcesses[i] = getpid();
+                nodeProcesses[i] = getpid();
                 nodeStart();
             }
         }
@@ -68,12 +106,11 @@ void *masterStart()
         }
         else if(pid == 0)
         {
-            *masterBookProcId = getpid();
+            masterBookProcess[0] = getpid();
             masterBookStart();
             //TODO: alla terminazione del libro mastro corrisponde una terminazione della simulazione
         }
     }
-
 
     sleep(SO_SIM_SEC);
     while(wait(NULL) > 0);
@@ -83,7 +120,6 @@ void *masterStart()
 int main(int argc, char const *argv[])
 {
     printf("Creazione del processo Master\n");
-    int status;
     pid_t pid = fork();
 
     if(pid == -1)

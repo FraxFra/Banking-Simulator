@@ -1,5 +1,5 @@
 #include "config.h"
-
+/*
 int getTransQtys(Transaction** transactionBlock)
 {
     int i, j, qty;
@@ -44,7 +44,7 @@ int checkTransaction(Transaction* transaction)
                 {
                     return 0;
                 }
-            }*/
+            }
         }
     }
 
@@ -97,14 +97,14 @@ void userListener(Transaction** transactionPool)
     //     //informare il sender che la tp è piena
     //     discardTransaction(transactionPool);
     // }
-}
+}*/
 
 
 void *nodeStart()
 {
     pid_t nodePid = getpid();
     printf("Creato processo nodo Id: %d\n", nodePid);
-
+/*
     int msgid = msgget(nodePid, IPC_CREAT | S_IRUSR | S_IWUSR);
     printf("%d nodo\n", msgid);
     while(1)
@@ -117,7 +117,7 @@ void *nodeStart()
         usleep((rand() % SO_MAX_TRANS_PROC_NSEC) + SO_MIN_TRANS_PROC_NSEC);
         //spedisce il blocco al libro mastro
 
-        free(transactionPool);*/
-    }
+        free(transactionPool);
+    }*/
     exit(EXIT_SUCCESS);
 }

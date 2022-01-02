@@ -1,5 +1,5 @@
 #include "config.h"
-
+/*
 int calcBalance(pid_t userPid)
 {
     int amountTransactions = 0;
@@ -34,15 +34,11 @@ int calcBalance(pid_t userPid)
 pid_t findReceiver(pid_t userPid)
 {
     int res = rand() % SO_USERS_NUM;
-    printf("%d", *usersProcesses[res]);
-    printf("%d", userPid);
-    while(*usersProcesses[res] == userPid)
+    while(*userProcesses[res] == userPid)
     {
             res = rand() % SO_USERS_NUM;
-
-            printf("aa");
     }
-    return *usersProcesses[res];
+    return *userProcesses[res];
 }
 
 pid_t findNode()
@@ -55,7 +51,7 @@ int calcReward(int amount)
     return (amount * SO_REWARD) / 100;
 }
 
-void createTransaction(Transaction* t, pid_t userPid, int balance)
+void *createTransaction(Transaction* t, pid_t userPid, int balance)
 {
     srand(time(0));
     int amount = rand() % balance + 1;
@@ -64,17 +60,18 @@ void createTransaction(Transaction* t, pid_t userPid, int balance)
     t->reward = calcReward(amount);
     t->qty = amount - t->reward;
     t->receiver = findReceiver(userPid);
-}
+}*/
 
-void* userStart()
+void *userStart()
 {
     pid_t userPid = getpid();
     printf("Creato processo utente Id: %d\n", userPid);
-    int actual_retry = 0;
+    /*int actual_retry = 0;
     int msgid = -1;
-
+    printf("-- %d", *usersProcesses[2]);
     while(actual_retry <= SO_RETRY)
     {
+
         int balance = calcBalance(userPid);
         if(balance >= 2)
         {
@@ -84,15 +81,13 @@ void* userStart()
             while(msgid == -1)
             {
                 msgid = msgget(node, 0);
-                printf("%d utente\n", msgid);
                 sleep(1);
             }
-            printf("aaaaaaaa" );
             int a = msgsnd(msgget(1, IPC_CREAT | S_IRUSR | S_IWUSR), t, sizeof(t), IPC_NOWAIT);
             usleep((rand() % SO_MAX_TRANS_GEN_NSEC) + SO_MIN_TRANS_GEN_NSEC);
             //incrementare actual_retry in caso negativo
         }
-    }
+    }*/
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
     exit(EXIT_SUCCESS);
 }

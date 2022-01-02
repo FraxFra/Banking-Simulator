@@ -6,8 +6,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/msg.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <string.h>
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
@@ -56,20 +58,17 @@ typedef struct _Log
     //int** nTransactionPool
 } Log;
 
-extern Transaction*** masterBookRegistry;
-extern pid_t** usersProcesses;
-extern pid_t** nodeProcesses;
-extern pid_t* masterBookProcId;
+extern volatile Transaction** masterBookRegistry;
+extern volatile pid_t* userProcesses;
+extern volatile pid_t* nodeProcesses;
+extern volatile pid_t* masterBookProcess;
 
 //Inizio esecuzione e creazione processi
 extern void *masterStart();
-
 //Routine utenti
 extern void *userStart();
-
 //Routine nodi
 extern void *nodeStart();
-
 //Routine masterBook
 extern void *masterBookStart();
 
