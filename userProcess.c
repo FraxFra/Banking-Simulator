@@ -1,5 +1,5 @@
 #include "config.h"
-/*
+
 int calcBalance(pid_t userPid)
 {
     int amountTransactions = 0;
@@ -13,16 +13,13 @@ int calcBalance(pid_t userPid)
             {
                 for(j = 0; j < SO_BLOCK_SIZE; j++)
                 {
-                    if(masterBookRegistry[i][j] != NULL)
+                    if(masterBookRegistry[i][j].sender == userPid)
                     {
-                        if(masterBookRegistry[i][j]->sender == userPid)
-                        {
-                                amountTransactions = amountTransactions - masterBookRegistry[i][j]->qty - masterBookRegistry[i][j]->reward;
-                        }
-                        else if(masterBookRegistry[i][j]->receiver == userPid)
-                        {
-                                amountTransactions = amountTransactions + masterBookRegistry[i][j]->qty;
-                        }
+                            amountTransactions = amountTransactions - masterBookRegistry[i][j].qty - masterBookRegistry[i][j].reward;
+                    }
+                    else if(masterBookRegistry[i][j].receiver == userPid)
+                    {
+                            amountTransactions = amountTransactions + masterBookRegistry[i][j].qty;
                     }
                 }
             }
@@ -33,17 +30,18 @@ int calcBalance(pid_t userPid)
 
 pid_t findReceiver(pid_t userPid)
 {
+    srand(time(NULL));
     int res = rand() % SO_USERS_NUM;
-    while(*userProcesses[res] == userPid)
+    while(userProcesses[res] == userPid)
     {
             res = rand() % SO_USERS_NUM;
     }
-    return *userProcesses[res];
+    return userProcesses[res];
 }
 
 pid_t findNode()
 {
-    return *nodeProcesses[(rand() % SO_NODES_NUM)];
+    return nodeProcesses[(rand() % SO_NODES_NUM)];
 }
 
 int calcReward(int amount)
@@ -60,23 +58,26 @@ void *createTransaction(Transaction* t, pid_t userPid, int balance)
     t->reward = calcReward(amount);
     t->qty = amount - t->reward;
     t->receiver = findReceiver(userPid);
-}*/
+}
 
 void *userStart()
 {
     pid_t userPid = getpid();
     printf("Creato processo utente Id: %d\n", userPid);
-    /*int actual_retry = 0;
+
+    int actual_retry = 0;
     int msgid = -1;
-    printf("-- %d", *usersProcesses[2]);
+
+    sleep(2);
     while(actual_retry <= SO_RETRY)
     {
-
         int balance = calcBalance(userPid);
         if(balance >= 2)
         {
             Transaction* t = (Transaction*)malloc(sizeof(Transaction));
             createTransaction(t, userPid, balance);
+            masterBookRegistry[0][1] = *t; //da fixare
+            printf("%d\n", masterBookRegistry[0][1].qty);
             pid_t node = findNode();
             while(msgid == -1)
             {
@@ -87,7 +88,7 @@ void *userStart()
             usleep((rand() % SO_MAX_TRANS_GEN_NSEC) + SO_MIN_TRANS_GEN_NSEC);
             //incrementare actual_retry in caso negativo
         }
-    }*/
+    }
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
     exit(EXIT_SUCCESS);
 }
