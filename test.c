@@ -1,6 +1,7 @@
 #include "config.h"
 
-volatile Transaction** masterBookRegistry;
+volatile Transaction* masterBookRegistry;
+volatile int* masterBookBlockLength;
 volatile pid_t* userProcesses;
 volatile pid_t* nodeProcesses;
 volatile pid_t* masterBookProcess;
@@ -38,10 +39,17 @@ void allocMasterBookProcess()
 
 void allocMasterBookRegistry()
 {
-    masterBookRegistry = mmap(NULL, SO_REGISTRY_SIZE * SO_BLOCK_SIZE * sizeof(Transaction), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); //non testato
+    masterBookRegistry = mmap(NULL, sizeof(Transaction) * SO_REGISTRY_SIZE * SO_BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if(!masterBookRegistry)
     {
         perror("la mappatura del masterBookRegistry e' fallita");
+        exit(1);
+    }
+
+    masterBookBlockLength = mmap(NULL, sizeof(int) * SO_REGISTRY_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!masterBookBlockLength)
+    {
+        perror("la mappatura del masterBookBlockLength e' fallita");
         exit(1);
     }
 }
@@ -53,7 +61,6 @@ void *masterStart()
 
     int i = 0;
     pid_t pid;
-
     allocUserProcesses();
     allocNodeProcesses();
     allocMasterBookProcess();

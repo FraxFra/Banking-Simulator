@@ -9,7 +9,9 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <string.h>
+#include <limits.h>
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
@@ -42,13 +44,13 @@ typedef struct _Transaction
     int reward;
 } Transaction;
 
-typedef struct _messageUser
+typedef struct _Queue
 {
-    long mtype;
-    Transaction* t;
-}messageUser;
-
-typedef struct _Log
+    int front, rear, size;
+    unsigned capacity;
+    int* array;
+}Queue;
+/*typedef struct _Log
 {
     int reason;
     //int*** balanceUsers
@@ -56,9 +58,10 @@ typedef struct _Log
     //int nDeadUsers
     //int nLibroMastroBlocks
     //int** nTransactionPool
-} Log;
+} Log;*/
 
-extern volatile Transaction** masterBookRegistry;
+extern volatile Transaction* masterBookRegistry;
+extern volatile int* masterBookBlockLength;
 extern volatile pid_t* userProcesses;
 extern volatile pid_t* nodeProcesses;
 extern volatile pid_t* masterBookProcess;

@@ -104,10 +104,14 @@ void *nodeStart()
 {
     pid_t nodePid = getpid();
     printf("Creato processo nodo Id: %d\n", nodePid);
-/*
+    Transaction* t = (Transaction*)malloc(sizeof(Transaction));
+
     int msgid = msgget(nodePid, IPC_CREAT | S_IRUSR | S_IWUSR);
-    printf("%d nodo\n", msgid);
-    while(1)
+    printf("%d msgid nodo\n", msgid);
+    sleep(5);
+    int res = msgrcv(msgid, t, sizeof(Transaction), 0, IPC_NOWAIT);
+    printf("%d res nodo\n", t->receiver);
+    /*while(1)
     {
         sleep(2);
         //Transaction* t = (Transaction*)malloc(sizeof(Transaction));
