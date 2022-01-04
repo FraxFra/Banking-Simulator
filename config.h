@@ -60,11 +60,11 @@ typedef struct _Queue
     //int** nTransactionPool
 } Log;*/
 
-extern volatile Transaction* masterBookRegistry;
-extern volatile int* masterBookBlockLength;
-extern volatile pid_t* userProcesses;
-extern volatile pid_t* nodeProcesses;
-extern volatile pid_t* masterBookProcess;
+extern Transaction* masterBookRegistry;
+extern int* masterBookBlockLength;
+extern pid_t* userProcesses;
+extern pid_t* nodeProcesses;
+extern pid_t* masterBookProcess;
 
 //Inizio esecuzione e creazione processi
 extern void *masterStart();

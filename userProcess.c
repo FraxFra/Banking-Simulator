@@ -62,26 +62,26 @@ void *userStart()
     printf("Creato processo utente Id: %d\n", userPid);
     int actual_retry = 0;
     int msgid = -1;
-    
-    sleep(2);
-    while(actual_retry <= SO_RETRY)
-    {
+
+    //sleep(2);
+    //while(actual_retry <= SO_RETRY)
+    //{
         int balance = calcBalance(userPid);
         if(balance >= 2)
         {
             Transaction* t = malloc(sizeof(Transaction));
             createTransaction(t, userPid, balance);
             pid_t node = findNode();
-            while(msgid == -1)
+            while(msgid == 0)
             {
-                msgid = msgget(node, 0);
+                //msgid = msgget(node, 0);
                 usleep(500000000);
             }
-            int a = msgsnd(msgid, t, sizeof(Transaction), IPC_NOWAIT);
+            //int a = msgsnd(msgid, t, sizeof(Transaction), IPC_NOWAIT);
             //incrementare actual_retry in caso negativo
         }
-        usleep((rand() % SO_MAX_TRANS_GEN_NSEC) + SO_MIN_TRANS_GEN_NSEC);
-    }
+        //usleep((rand() % SO_MAX_TRANS_GEN_NSEC) + SO_MIN_TRANS_GEN_NSEC);
+    //}
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
     exit(EXIT_SUCCESS);
 }
