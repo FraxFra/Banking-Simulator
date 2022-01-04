@@ -45,9 +45,9 @@ int calcReward(int amount)
     return (amount * SO_REWARD) / 100;
 }
 
-Transaction createTransaction(Transaction* t, pid_t userPid, int balance)
+void createTransaction(Transaction* t, pid_t userPid, int balance)
 {
-    srand(time(0));
+    srand(userPid * time(NULL));
     int amount = rand() % balance + 1;
     t->timestamp = clock();
     t->sender = userPid;
@@ -56,31 +56,54 @@ Transaction createTransaction(Transaction* t, pid_t userPid, int balance)
     t->qty = amount - t->reward;
 }
 
-void *userStart()
+void sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
+{
+    int code;
+    BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));
+    Transaction* t = (Transaction*)malloc(sizeof(Transaction));
+
+    createTransaction(t, userPid, balance);
+    message->mtype = findNode();
+    message->transaction = *t;
+
+    code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0);
+    if(code == -1)
+    {
+        printf("Error in sendTransaction; sono l'utente %d e volevo trasmettere al nodo %ld\n", userPid, message->mtype);
+        exit(EXIT_FAILURE);
+    }
+
+}
+
+void syncUser()
+{
+    size_t np;
+    size_t mbp;
+    while((np + mbp) == (SO_NODES_NUM + 1))
+    {
+        np = sizeof(nodeProcesses) / sizeof(nodeProcesses[0]);
+        mbp = sizeof(masterBookProcess) / sizeof(masterBookProcess[0]);
+    }
+}
+
+void *userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
 {
     pid_t userPid = getpid();
     printf("Creato processo utente Id: %d\n", userPid);
-    int actual_retry = 0;
-    int msgid = -1;
+    int actual_retry;
+    int codeSendTransaction;
+    int codeReceiveReplyTransaction;
 
-    //sleep(2);
+    syncUser();
     //while(actual_retry <= SO_RETRY)
     //{
         int balance = calcBalance(userPid);
         if(balance >= 2)
         {
-            Transaction* t = malloc(sizeof(Transaction));
-            createTransaction(t, userPid, balance);
-            pid_t node = findNode();
-            while(msgid == 0)
-            {
-                //msgid = msgget(node, 0);
-                usleep(500000000);
-            }
-            //int a = msgsnd(msgid, t, sizeof(Transaction), IPC_NOWAIT);
-            //incrementare actual_retry in caso negativo
+            sendTransaction(userPid, balance, msgTransactionSendId);
+
         }
-        //usleep((rand() % SO_MAX_TRANS_GEN_NSEC) + SO_MIN_TRANS_GEN_NSEC);
+        usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     //}
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
     exit(EXIT_SUCCESS);

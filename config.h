@@ -8,10 +8,11 @@
 #include <sys/msg.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
-#include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
 #include <limits.h>
+#include <stdbool.h>
+#include <sys/ipc.h>
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
@@ -44,12 +45,18 @@ typedef struct _Transaction
     int reward;
 } Transaction;
 
-typedef struct _Queue
+typedef struct _BufferTransactionSend
 {
-    int front, rear, size;
-    unsigned capacity;
-    int* array;
-}Queue;
+    long mtype;
+    Transaction transaction;
+}BufferTransactionSend;
+
+typedef struct _BufferTransactionReply
+{
+    long mtype;
+    bool result;
+}BufferTransactionReply;
+
 /*typedef struct _Log
 {
     int reason;

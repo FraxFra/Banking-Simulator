@@ -23,7 +23,6 @@ void rewardTransaction(Transaction** transactionBlock)
     rewardTransaction->reward = 0;
     rewardTransaction->qty = getTransQtys(transactionBlock);
     rewardTransaction->receiver = pthread_self();
-
     transactionBlock[SO_BLOCK_SIZE] = rewardTransaction;
 }
 
@@ -36,7 +35,7 @@ int checkTransaction(Transaction* transaction)
     {
         for(; j < SO_REGISTRY_SIZE; j++)
         {
-            /*if(masterBookTransactions[i][j] != NULL)
+            if(masterBookTransactions[i][j] != NULL)
             {
                 if(masterBookTransactions[i][j]->timestamp == transaction->timestamp
                    && masterBookTransactions[i][j]->sender == transaction->sender
@@ -97,31 +96,63 @@ void userListener(Transaction** transactionPool)
     //     //informare il sender che la tp è piena
     //     discardTransaction(transactionPool);
     // }
-}*/
+}
+*/
 
+void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, bool res)
+{
+    int code;
+    BufferTransactionReply* messageReply = (BufferTransactionReply*)malloc(sizeof(BufferTransactionReply));
+    messageReply->mtype = message->transaction.sender;
+    messageReply->result = res;
+    code = msgsnd(*msgTransactionReplyId, messageReply, sizeof(BufferTransactionReply), 0);
+    if(code == -1)
+    {
+        printf("Error in replyTransaction; sono il nodo %ld e volevo trasmettere all'utente %ld\n", message->mtype, messageReply->mtype);
+        exit(EXIT_FAILURE);
+    }
+}
+void receiveTransactions(pid_t nodePid, Transaction* transactionPool, int* msgTransactionSendId, int* msgTransactionReplyId)
+{
+    int code;
+    int i;
+    BufferTransactionSend *message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));;
 
-void *nodeStart()
+    for(i = 0; i < SO_TP_SIZE; i++)
+    {
+        while(code == -1)
+        {
+            code = msgrcv(*msgTransactionSendId, message, sizeof(BufferTransactionSend), nodePid, IPC_NOWAIT);
+        }
+        transactionPool[i] = message->transaction;
+        replyTransaction(message, msgTransactionReplyId, 0);
+    }
+}
+
+void syncNode()
+{
+    size_t up;
+    size_t mbp;
+    while((up + mbp) == (SO_USERS_NUM + 1))
+    {
+        up = sizeof(userProcesses) / sizeof(userProcesses[0]);
+        mbp = sizeof(masterBookProcess) / sizeof(masterBookProcess[0]);
+    }
+}
+
+void *nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBlockSendId, int* msgBlockReplyId)
 {
     pid_t nodePid = getpid();
     printf("Creato processo nodo Id: %d\n", nodePid);
-    Transaction* t = (Transaction*)malloc(sizeof(Transaction));
 
-    //int msgid = msgget(nodePid, IPC_CREAT | S_IRUSR | S_IWUSR);
-    //printf("%d msgid nodo\n", msgid);
-    sleep(5);
-    //int res = msgrcv(msgid, t, sizeof(Transaction), 0, IPC_NOWAIT);
-    printf("%d res nodo\n", t->receiver);
-    /*while(1)
-    {
-        sleep(2);
-        //Transaction* t = (Transaction*)malloc(sizeof(Transaction));
-        //int a = msgrcv(msgget(1, IPC_CREAT | S_IRUSR | S_IWUSR), &t, sizeof(Transaction), 0, IPC_NOWAIT);
-        /*Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
-        userListener(transactionPool);
-        usleep((rand() % SO_MAX_TRANS_PROC_NSEC) + SO_MIN_TRANS_PROC_NSEC);
-        //spedisce il blocco al libro mastro
+    syncNode();
+    Transaction* transactionPool = (Transaction*)malloc(sizeof(Transaction) * SO_TP_SIZE);
+    //while
+    //{
+        receiveTransactions(nodePid, transactionPool, msgTransactionSendId, msgTransactionReplyId);
+    //}
+    usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
+    //spedisce il blocco al libro mastro
 
-        free(transactionPool);
-    }*/
     exit(EXIT_SUCCESS);
 }

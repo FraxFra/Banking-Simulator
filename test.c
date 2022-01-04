@@ -111,23 +111,21 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
 {
     pid_t pid;
     int i;
+    int wait;
 
-    for(i = 0; i < SO_USERS_NUM; i++)
+    if(getpid() == masterPid)
     {
-        if(getpid() == masterPid)
+        pid = fork();
+        if(pid == -1)
         {
-            pid = fork();
-            if(pid == -1)
-            {
-                printf("Errore con la creazione di un processo utente\n");
-                exit(EXIT_FAILURE);
-            }
-            else if(pid == 0)
-            {
-                userProcesses[i] = getpid();
-                userStart();
-                //TODO: alla exit() di tutti gli utenti deve corrispondere una terminazione della simulazione
-            }
+            printf("Errore con la creazione di un processo masterBook\n");
+            exit(EXIT_FAILURE);
+        }
+        else if(pid == 0)
+        {
+            masterBookProcess[0] = getpid();
+            masterBookStart(msgBlockSendId, msgBlockReplyId);
+            //TODO: alla terminazione del libro mastro corrisponde una terminazione della simulazione
         }
     }
 
@@ -144,24 +142,27 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
             else if(pid == 0)
             {
                 nodeProcesses[i] = getpid();
-                nodeStart();
+                nodeStart(msgTransactionSendId, msgTransactionReplyId, msgBlockSendId, msgBlockReplyId);
             }
         }
     }
 
-    if(getpid() == masterPid)
+    for(i = 0; i < SO_USERS_NUM; i++)
     {
-        pid = fork();
-        if(pid == -1)
+        if(getpid() == masterPid)
         {
-            printf("Errore con la creazione di un processo masterBook\n");
-            exit(EXIT_FAILURE);
-        }
-        else if(pid == 0)
-        {
-            masterBookProcess[0] = getpid();
-            masterBookStart();
-            //TODO: alla terminazione del libro mastro corrisponde una terminazione della simulazione
+            pid = fork();
+            if(pid == -1)
+            {
+                printf("Errore con la creazione di un processo utente\n");
+                exit(EXIT_FAILURE);
+            }
+            else if(pid == 0)
+            {
+                userProcesses[i] = getpid();
+                userStart(msgTransactionSendId, msgTransactionReplyId);
+                //TODO: alla exit() di tutti gli utenti deve corrispondere una terminazione della simulazione
+            }
         }
     }
 }
