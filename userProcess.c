@@ -56,7 +56,7 @@ void createTransaction(Transaction* t, pid_t userPid, int balance)
     t->qty = amount - t->reward;
 }
 
-void sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
+pid_t sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
 {
     int code;
     BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));
@@ -66,13 +66,27 @@ void sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
     message->mtype = findNode();
     message->transaction = *t;
 
-    code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0);
+    code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0); //bloccante
     if(code == -1)
     {
         printf("Error in sendTransaction; sono l'utente %d e volevo trasmettere al nodo %ld\n", userPid, message->mtype);
         exit(EXIT_FAILURE);
     }
+    return message->mtype;
+}
 
+bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
+{
+    int code;
+    BufferTransactionReply* message = (BufferTransactionReply*)malloc(sizeof(BufferTransactionReply));
+    
+    code = msgrcv(*msgTransactionReplyId, message, sizeof(BufferTransactionReply), userPid, 0);//bloccante
+    if(code == -1)
+    {
+        printf("Error in getTransactionReply; sono l'utente %d e ricevere una risposta dal nodo %ld\n", userPid, message->mtype);
+        exit(EXIT_FAILURE);
+    }
+    return message->result;
 }
 
 void syncUser()
@@ -91,8 +105,7 @@ void *userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     pid_t userPid = getpid();
     printf("Creato processo utente Id: %d\n", userPid);
     int actual_retry;
-    int codeSendTransaction;
-    int codeReceiveReplyTransaction;
+    pid_t node;
 
     syncUser();
     //while(actual_retry <= SO_RETRY)
@@ -100,8 +113,11 @@ void *userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
         int balance = calcBalance(userPid);
         if(balance >= 2)
         {
-            sendTransaction(userPid, balance, msgTransactionSendId);
-
+            node = sendTransaction(userPid, balance, msgTransactionSendId);
+            if(getTransactionReply(userPid, msgTransactionReplyId, node) == 0)
+            {
+                printf("tutto ok\n" );
+            }
         }
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     //}

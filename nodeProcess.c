@@ -105,7 +105,7 @@ void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId
     BufferTransactionReply* messageReply = (BufferTransactionReply*)malloc(sizeof(BufferTransactionReply));
     messageReply->mtype = message->transaction.sender;
     messageReply->result = res;
-    code = msgsnd(*msgTransactionReplyId, messageReply, sizeof(BufferTransactionReply), 0);
+    code = msgsnd(*msgTransactionReplyId, messageReply, sizeof(BufferTransactionReply), 0);//bloccante
     if(code == -1)
     {
         printf("Error in replyTransaction; sono il nodo %ld e volevo trasmettere all'utente %ld\n", message->mtype, messageReply->mtype);
@@ -117,13 +117,9 @@ void receiveTransactions(pid_t nodePid, Transaction* transactionPool, int* msgTr
     int code;
     int i;
     BufferTransactionSend *message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));;
-
     for(i = 0; i < SO_TP_SIZE; i++)
     {
-        while(code == -1)
-        {
-            code = msgrcv(*msgTransactionSendId, message, sizeof(BufferTransactionSend), nodePid, IPC_NOWAIT);
-        }
+        code = msgrcv(*msgTransactionSendId, message, sizeof(BufferTransactionSend), nodePid, 0); //bloccante
         transactionPool[i] = message->transaction;
         replyTransaction(message, msgTransactionReplyId, 0);
     }
