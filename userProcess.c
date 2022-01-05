@@ -79,7 +79,7 @@ bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
 {
     int code;
     BufferTransactionReply* message = (BufferTransactionReply*)malloc(sizeof(BufferTransactionReply));
-    
+
     code = msgrcv(*msgTransactionReplyId, message, sizeof(BufferTransactionReply), userPid, 0);//bloccante
     if(code == -1)
     {
@@ -105,18 +105,23 @@ void *userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     pid_t userPid = getpid();
     printf("Creato processo utente Id: %d\n", userPid);
     int actual_retry;
+    int balance;
     pid_t node;
 
     syncUser();
     //while(actual_retry <= SO_RETRY)
     //{
-        int balance = calcBalance(userPid);
+        balance = calcBalance(userPid);
         if(balance >= 2)
         {
             node = sendTransaction(userPid, balance, msgTransactionSendId);
             if(getTransactionReply(userPid, msgTransactionReplyId, node) == 0)
             {
-                printf("tutto ok\n" );
+                printf("tutto ok\n"); //da rimuovere successivamente
+            }
+            else
+            {
+                actual_retry++;
             }
         }
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
