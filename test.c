@@ -1,7 +1,7 @@
 #include "config.h"
 
 Transaction* masterBookRegistry;
-int* masterBookBlockLength;
+int* nblocksRegistry;
 pid_t* userProcesses;
 pid_t* nodeProcesses;
 pid_t* masterBookProcess;
@@ -36,8 +36,8 @@ void mapSharedMemory()
         exit(EXIT_FAILURE);
     }
 
-    masterBookBlockLength = mmap(NULL, sizeof(int) * SO_REGISTRY_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if(!masterBookBlockLength)
+    nblocksRegistry = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!nblocksRegistry)
     {
         perror("la mappatura del masterBookBlockLength e' fallita");
         exit(EXIT_FAILURE);
@@ -59,20 +59,6 @@ void initMsgId(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBl
         printf("Errore nella creazione dell'id msgTransactionReplyId\n");
         exit(EXIT_FAILURE);
     }
-
-    *msgBlockSendId = msgget(2, IPC_CREAT | S_IRUSR | S_IWUSR);
-    if(*msgBlockSendId == -1)
-    {
-        printf("Errore nella creazione dell'id msgBlockSendId\n");
-        exit(EXIT_FAILURE);
-    }
-
-    *msgBlockReplyId = msgget(3, IPC_CREAT | S_IRUSR | S_IWUSR);
-    if(*msgBlockReplyId == -1)
-    {
-        printf("Errore nella creazione dell'id msgBlockReplyId\n");
-        exit(EXIT_FAILURE);
-    }
 }
 
 void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBlockSendId, int* msgBlockReplyId)
@@ -91,43 +77,12 @@ void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* 
         printf("Errore con la rimozione dell'id msgTransactionReplyId\n");
         exit(EXIT_FAILURE);
     }
-
-    code = msgctl(*msgBlockSendId, IPC_RMID, NULL);
-    if(code == -1)
-    {
-        printf("Errore con la rimozione dell'id msgBlockSendId\n");
-        exit(EXIT_FAILURE);
-    }
-
-    code = msgctl(*msgBlockReplyId, IPC_RMID, NULL);
-    if(code == -1)
-    {
-        printf("Errore con la rimozione dell'id msgBlockReplyId\n");
-        exit(EXIT_FAILURE);
-    }
 }
 
 void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBlockSendId, int* msgBlockReplyId)
 {
     pid_t pid;
     int i;
-    int wait;
-
-    if(getpid() == masterPid)
-    {
-        pid = fork();
-        if(pid == -1)
-        {
-            printf("Errore con la creazione di un processo masterBook\n");
-            exit(EXIT_FAILURE);
-        }
-        else if(pid == 0)
-        {
-            masterBookProcess[0] = getpid();
-            masterBookStart(msgBlockSendId, msgBlockReplyId);
-            //TODO: alla terminazione del libro mastro corrisponde una terminazione della simulazione
-        }
-    }
 
     for(i = 0; i < SO_NODES_NUM; i++)
     {
@@ -199,7 +154,7 @@ void unMapSharedMemory()
         exit(EXIT_FAILURE);
     }
 
-    code = munmap(masterBookBlockLength, SO_USERS_NUM * sizeof(pid_t));
+    code = munmap(nblocksRegistry, sizeof(int));
     if(code == -1)
     {
         printf("Errore rimuovere la mappa masterBookBlockLength");
@@ -207,7 +162,7 @@ void unMapSharedMemory()
     }
 }
 
-void* masterStart()
+void masterStart()
 {
     pid_t masterPid = getpid();
     printf("Creato processo master: %d\n", masterPid);
