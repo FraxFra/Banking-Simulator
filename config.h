@@ -12,6 +12,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <pthread.h>
 #include <sys/ipc.h>
 
 #ifndef __CONFIG_H
@@ -57,6 +58,25 @@ typedef struct _BufferTransactionReply
     bool result;
 }BufferTransactionReply;
 
+typedef struct _BufferBlockSend
+{
+    long mtype;
+    Transaction block[SO_BLOCK_SIZE];
+}BufferBlockSend;
+
+typedef struct _BufferBlockReply
+{
+    long mtype;
+    bool result;
+}BufferBlockReply;
+
+typedef struct _PthreadArguments
+{
+    pid_t nodePid;
+    Transaction** transactionPool;
+    int* msgTransactionSendId;
+    int* msgTransactionReplyId;
+}PthreadArguments;
 /*typedef struct _Log
 {
     int reason;
@@ -68,19 +88,19 @@ typedef struct _BufferTransactionReply
 } Log;*/
 
 extern Transaction* masterBookRegistry;
-extern int* masterBookBlockLength;
+extern int* nblocksRegistry;
 extern pid_t* userProcesses;
 extern pid_t* nodeProcesses;
 extern pid_t* masterBookProcess;
 
 //Inizio esecuzione e creazione processi
-extern void *masterStart();
+extern void masterStart();
 //Routine utenti
-extern void *userStart();
+extern void userStart();
 //Routine nodi
-extern void *nodeStart();
+extern void nodeStart();
 //Routine masterBook
-extern void *masterBookStart();
+extern void masterBookStart();
 
 
 #endif
