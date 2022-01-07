@@ -1,9 +1,50 @@
 #include "config.h"
 
-
-void insertBlock(Transaction** transactionBlock)
+bool checkTerminationNode()
 {
+    return termination[0];
+}
 
+void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport)
+{
+    int code;
+    BufferReport* message = (BufferReport*)malloc(sizeof(BufferReport));
+
+    message->mtype = nodePid;
+    message->alive = 0;
+    message->transactionPool = transactionPool;
+
+    code = msgsnd(*msgReport, message, sizeof(BufferReport), 0);
+    if(code == -1)
+    {
+        printf("Error in msgReport; sono il nodo %d e volevo trasmettere al master il report\n", nodePid);
+        exit(EXIT_FAILURE);
+    }
+    exit(EXIT_SUCCESS);
+}
+
+void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport)
+{
+    int i;
+    int j = 0;
+    int actualTransactions = nblocksRegistry[0] * SO_BLOCK_SIZE;
+    sem_wait(semRegistry);
+    if(actualTransactions != SO_BLOCK_SIZE * SO_REGISTRY_SIZE)
+    {
+        for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
+        {
+            masterBookRegistry[i] = *transactionBlock[j];
+            j++;
+        }
+        nblocksRegistry[0] = nblocksRegistry[0] + 1;
+        sem_post(semRegistry);
+        printf("Blocco in posizione %d inserito\n", actualTransactions);
+    }
+    else
+    {
+        sem_post(semRegistry);
+        sendReportNode(transactionPool, nodePid, msgReport);
+    }
 }
 
 int getQuantities(Transaction** transactionBlock)
@@ -58,7 +99,7 @@ int chooseTransaction(Transaction** transactionPool)
     return i;
 }
 
-void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgBlockSendId, int* msgBlockReplyId)
+void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReport)
 {
     Transaction** transactionBlock = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
     int i;
@@ -70,7 +111,7 @@ void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgBlockSend
         {
             transactionBlock[blockIdx] = (Transaction*) malloc(sizeof(Transaction));
             transactionBlock[blockIdx] = transactionPool[i];
-            //TODO: eliminare transactionpool[i]
+            transactionPool[i] = NULL;
         }
         else
         {
@@ -80,7 +121,7 @@ void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgBlockSend
 
     rewardTransaction(transactionBlock, nodePid);
     usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
-    insertBlock(transactionBlock);
+    insertBlock(transactionBlock, transactionPool, nodePid, msgReport);
 }
 
 void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, bool res)
@@ -150,7 +191,7 @@ void syncNode()
     }
 }
 
-void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBlockSendId, int* msgBlockReplyId)
+void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
 {
     pid_t nodePid = getpid();
     printf("Creato processo nodo Id: %d\n", nodePid);
@@ -171,7 +212,7 @@ void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBl
 
     while(1)
     {
-        createBlock(transactionPool, nodePid, msgBlockSendId, msgBlockReplyId);
+        createBlock(transactionPool, nodePid, msgReport);
     }
 
     exit(EXIT_SUCCESS);

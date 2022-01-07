@@ -5,6 +5,8 @@ int* nblocksRegistry;
 pid_t* userProcesses;
 pid_t* nodeProcesses;
 pid_t* masterBookProcess;
+sem_t* semRegistry;
+bool* termination;
 
 void mapSharedMemory()
 {
@@ -42,9 +44,25 @@ void mapSharedMemory()
         perror("la mappatura del masterBookBlockLength e' fallita");
         exit(EXIT_FAILURE);
     }
+
+    semRegistry = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!semRegistry)
+    {
+        perror("la mappatura del semRegistry e' fallita");
+        exit(EXIT_FAILURE);
+    }
+    sem_init(semRegistry, 1, 1);
+
+    termination = mmap(NULL, sizeof(bool), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!termination)
+    {
+        perror("la mappatura del termination e' fallita");
+        exit(EXIT_FAILURE);
+    }
+    termination[0] = 1;
 }
 
-void initMsgId(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBlockSendId, int* msgBlockReplyId)
+void initMsgId(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
 {
     *msgTransactionSendId = msgget(0, IPC_CREAT | S_IRUSR | S_IWUSR);
     if(*msgTransactionSendId == -1)
@@ -59,9 +77,16 @@ void initMsgId(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBl
         printf("Errore nella creazione dell'id msgTransactionReplyId\n");
         exit(EXIT_FAILURE);
     }
+
+    *msgReport = msgget(2, IPC_CREAT | S_IRUSR | S_IWUSR);
+    if(*msgReport == -1)
+    {
+        printf("Errore nella creazione dell'id msgReport\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
-void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBlockSendId, int* msgBlockReplyId)
+void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
 {
     int code;
     code = msgctl(*msgTransactionSendId, IPC_RMID, NULL);
@@ -77,9 +102,16 @@ void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* 
         printf("Errore con la rimozione dell'id msgTransactionReplyId\n");
         exit(EXIT_FAILURE);
     }
+
+    code = msgctl(*msgReport, IPC_RMID, NULL);
+    if(code == -1)
+    {
+        printf("Errore con la rimozione dell'id msgReport\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
-void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransactionReplyId, int* msgBlockSendId, int* msgBlockReplyId)
+void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
 {
     pid_t pid;
     int i;
@@ -97,7 +129,7 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
             else if(pid == 0)
             {
                 nodeProcesses[i] = getpid();
-                nodeStart(msgTransactionSendId, msgTransactionReplyId, msgBlockSendId, msgBlockReplyId);
+                nodeStart(msgTransactionSendId, msgTransactionReplyId, msgReport);
             }
         }
     }
@@ -115,7 +147,7 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
             else if(pid == 0)
             {
                 userProcesses[i] = getpid();
-                userStart(msgTransactionSendId, msgTransactionReplyId);
+                userStart(msgTransactionSendId, msgTransactionReplyId, msgReport);
                 //TODO: alla exit() di tutti gli utenti deve corrispondere una terminazione della simulazione
             }
         }
@@ -160,6 +192,20 @@ void unMapSharedMemory()
         printf("Errore rimuovere la mappa masterBookBlockLength");
         exit(EXIT_FAILURE);
     }
+
+    code = munmap(semRegistry, sizeof(sem_t));
+    if(code == -1)
+    {
+        printf("Errore rimuovere la mappa semRegistry");
+        exit(EXIT_FAILURE);
+    }
+
+    code = munmap(termination, sizeof(bool));
+    if(code == -1)
+    {
+        printf("Errore rimuovere la mappa termination");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void masterStart()
@@ -169,16 +215,15 @@ void masterStart()
 
     int msgTransactionSendId;
     int msgTransactionReplyId;
-    int msgBlockSendId;
-    int msgBlockReplyId;
+    int msgReport;
 
     mapSharedMemory();
-    initMsgId(&msgTransactionSendId, &msgTransactionReplyId, &msgBlockSendId, &msgBlockReplyId);
-    createProcesses(masterPid, &msgTransactionSendId, &msgTransactionReplyId, &msgBlockSendId, &msgBlockReplyId);
+    initMsgId(&msgTransactionSendId, &msgTransactionReplyId, &msgReport);
+    createProcesses(masterPid, &msgTransactionSendId, &msgTransactionReplyId, &msgReport);
     sleep(SO_SIM_SEC);
     while(wait(NULL) > 0);
 
-    deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgBlockSendId, &msgBlockReplyId);
+    deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReport);
     unMapSharedMemory();
     exit(EXIT_SUCCESS);
 }

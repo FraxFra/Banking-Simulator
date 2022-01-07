@@ -101,7 +101,7 @@ void syncUser()
     }
 }
 
-void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
+void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
 {
     pid_t userPid = getpid();
     printf("Creato processo utente Id: %d\n", userPid);
