@@ -85,7 +85,7 @@ bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
     }
     else
     {
-        printf("%d user %ld node ok!\n", userPid, message->mtype); //da rimuovere
+        printf("%d user %d node ok!\n", userPid, node); //da rimuovere
     }
     return message->result;
 }

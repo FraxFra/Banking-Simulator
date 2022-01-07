@@ -144,10 +144,13 @@ void* manageTransactions(void* args)
     int code;
     int i;
     int findPlace = 1;
-    BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));;
+    BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));
+    struct msqid_ds buf;
 
     while(1)
     {
+        //code = msgctl(*arguments->msgTransactionSendId, IPC_STAT, &buf);
+        //printf("%ld\n", buf.msg_qnum);
         code = msgrcv(*arguments->msgTransactionSendId, message, sizeof(BufferTransactionSend), arguments->nodePid, 0); //bloccante
         findPlace = 1;
         for(i = 0; i < SO_TP_SIZE; i++)
@@ -156,10 +159,11 @@ void* manageTransactions(void* args)
             {
                 if(arguments->transactionPool[i] == NULL)
                 {
-                    arguments->transactionPool[i] = (Transaction*)malloc(sizeof(Transaction)); //TODO:semaforo sulla transactionPool
+                    arguments->transactionPool[i] = (Transaction*)malloc(sizeof(Transaction));
                     arguments->transactionPool[i] = &message->transaction;
                     replyTransaction(message, arguments->msgTransactionReplyId, 0);
                     findPlace = 0;
+                    //printf("%d aaaaaaaaaaaaaaaaaa\n", arguments->transactionPool[1]->qty);
                 }
             }
         }
