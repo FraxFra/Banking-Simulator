@@ -77,21 +77,21 @@ typedef struct _PthreadArguments
     int* msgTransactionSendId;
     int* msgTransactionReplyId;
 }PthreadArguments;
-/*typedef struct _Log
+
+typedef struct _BufferReport
 {
-    int reason;
-    //int*** balanceUsers
-    //int*** balanceNodes
-    //int nDeadUsers
-    //int nLibroMastroBlocks
-    //int** nTransactionPool
-} Log;*/
+    long mtype;
+    bool alive;
+    Transaction** transactionPool;
+}BufferReport;
 
 extern Transaction* masterBookRegistry;
 extern int* nblocksRegistry;
 extern pid_t* userProcesses;
 extern pid_t* nodeProcesses;
 extern pid_t* masterBookProcess;
+extern sem_t* semRegistry;
+extern bool* termination;
 
 //Inizio esecuzione e creazione processi
 extern void masterStart();
