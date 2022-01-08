@@ -32,7 +32,7 @@
 #define SO_BLOCK_SIZE 6
 #define SO_MIN_TRANS_PROC_NSEC 500000000
 #define SO_MAX_TRANS_PROC_NSEC 1000000000
-#define SO_REGISTRY_SIZE 8
+#define SO_REGISTRY_SIZE 4
 #define SO_BUDGET_INIT 100
 #define SO_SIM_SEC 4
 #define SO_FRIENDS_NUM 10
@@ -76,6 +76,7 @@ typedef struct _PthreadArguments
     Transaction** transactionPool;
     int* msgTransactionSendId;
     int* msgTransactionReplyId;
+    sem_t* semThread;
 }PthreadArguments;
 
 typedef struct _BufferReport
@@ -93,13 +94,9 @@ extern pid_t* masterBookProcess;
 extern sem_t* semRegistry;
 extern bool* termination;
 
-//Inizio esecuzione e creazione processi
 extern void masterStart();
-//Routine utenti
 extern void userStart();
-//Routine nodi
 extern void nodeStart();
-//Routine masterBook
 extern void masterBookStart();
 
 

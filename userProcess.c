@@ -1,5 +1,22 @@
 #include "config.h"
 
+void cleanUserMap(pid_t userPid)
+{
+    int i;
+    for(i = 0; i < SO_USERS_NUM; i++)
+    {
+        if(userProcesses[i] == userPid)
+        {
+            userProcesses[i] = -1;
+        }
+    }
+}
+
+bool checkTerminationUser()
+{
+    return termination[0];
+}
+
 int calcBalance(pid_t userPid)
 {
     int amountTransactions = 0;
@@ -59,10 +76,17 @@ pid_t sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
     BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));
     Transaction* t = (Transaction*)malloc(sizeof(Transaction));
 
+    if(!checkTerminationUser())
+    {
+        printf("%d terminato utente send \n", userPid);
+        cleanUserMap(userPid);
+        exit(EXIT_SUCCESS);
+    }
+
     createTransaction(t, userPid, balance);
     message->mtype = findNode();
     message->transaction = *t;
-
+    printf("%d user %ld node partita\n", userPid, message->mtype);
     code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0); //bloccante
     if(code == -1)
     {
@@ -82,10 +106,6 @@ bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
     {
         printf("Error in getTransactionReply; sono l'utente %d e ricevere una risposta dal nodo %ld\n", userPid, message->mtype);
         exit(EXIT_FAILURE);
-    }
-    else
-    {
-        printf("%d user %d node ok!\n", userPid, node); //da rimuovere
     }
     return message->result;
 }
@@ -128,5 +148,7 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     }
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
+    printf("%d terminato utente dead\n", userPid);
+    cleanUserMap(userPid);
     exit(EXIT_SUCCESS);
 }
