@@ -1,24 +1,11 @@
 #include "config.h"
 
-bool checkUserMap()
-{
-    int i;
-    for(i = 0; i < SO_USERS_NUM; i++)
-    {
-        if(userProcesses[i] != -1)
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool checkTerminationNode()
 {
-    return termination[0];
+    return termination[0] == 0;
 }
 
-void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t semThread)
+void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
 {
     int code;
     BufferReport* message = (BufferReport*)malloc(sizeof(BufferReport));
@@ -33,17 +20,19 @@ void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport
         printf("Error in msgReport; sono il nodo %d e volevo trasmettere al master il report\n", nodePid);
         exit(EXIT_FAILURE);
     }
-    sem_wait(&semThread);
+    sem_wait(semThread);
+    sem_post(semThread);
     printf("%d terminato nodo\n", nodePid);
     exit(EXIT_SUCCESS);
 }
 
-void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t semThread)
+void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
 {
     int i;
     int j = 0;
-    int actualTransactions = nblocksRegistry[0] * SO_BLOCK_SIZE;
+
     sem_wait(semRegistry);
+    int actualTransactions = nblocksRegistry[0] * SO_BLOCK_SIZE;
     if(actualTransactions != SO_BLOCK_SIZE * SO_REGISTRY_SIZE)
     {
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
@@ -105,12 +94,12 @@ int checkTransaction(Transaction* transaction)
     return res;
 }
 
-int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t semThread)
+int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
 {
     int i = rand() % SO_TP_SIZE;
     while(transactionPool[i] == NULL)
     {
-        if(!checkTerminationNode())
+        if(checkTerminationNode())
         {
             sendReportNode(transactionPool, nodePid, msgReport, semThread);
         }
@@ -119,7 +108,7 @@ int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgRepo
     return i;
 }
 
-void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t semThread)
+void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
 {
     Transaction** transactionBlock = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
     int i;
@@ -136,6 +125,11 @@ void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReport, s
         else
         {
             blockIdx--; //per non lasciare transactionBlock[i] vuoto
+        }
+
+        if(checkTerminationNode())
+        {
+            sendReportNode(transactionPool, nodePid, msgReport, semThread);
         }
     }
 
@@ -170,15 +164,11 @@ void* manageTransactions(void* args)
     while(1)
     {
         code = msgrcv(*arguments->msgTransactionSendId, message, sizeof(BufferTransactionSend), arguments->nodePid, IPC_NOWAIT);
-        if(checkUserMap() && !checkTerminationNode())
+        if(checkTerminationNode())
         {
             sem_post(arguments->semThread);
             printf("terminato thread\n" );
             pthread_exit(NULL);
-        }
-        else if(!checkTerminationNode())
-        {
-            replyTransaction(message, arguments->msgTransactionReplyId, 1);
         }
         else if (code != -1)
         {
@@ -214,29 +204,17 @@ void initArgs(PthreadArguments* args, pid_t nodePid, Transaction** transactionPo
     args->semThread = semThread;
 }
 
-void syncNode()
-{
-    size_t up;
-    size_t mbp;
-    while((up + mbp) == (SO_USERS_NUM + 1))
-    {
-        up = sizeof(userProcesses) / sizeof(userProcesses[0]);
-        mbp = sizeof(masterBookProcess) / sizeof(masterBookProcess[0]);
-    }
-}
-
 void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
 {
     pid_t nodePid = getpid();
     printf("Creato processo nodo Id: %d\n", nodePid);
     int creationError;
-    sem_t semThread;
-    sem_init(&semThread, 0, 1);
-    syncNode();
+    sem_t* semThread = (sem_t*)malloc(sizeof(sem_t));
+    sem_init(semThread, 0, 1);
 
     Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
     PthreadArguments* args = (PthreadArguments*)malloc(sizeof(PthreadArguments));
-    initArgs(args, nodePid, transactionPool, msgTransactionSendId, msgTransactionReplyId, &semThread);
+    initArgs(args, nodePid, transactionPool, msgTransactionSendId, msgTransactionReplyId, semThread);
 
     pthread_t transactionPoolManager[1];
     creationError = pthread_create(&transactionPoolManager[0], NULL, manageTransactions, (void*)args);
@@ -250,6 +228,4 @@ void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
     {
         createBlock(transactionPool, nodePid, msgReport, semThread);
     }
-
-    exit(EXIT_SUCCESS);
 }
