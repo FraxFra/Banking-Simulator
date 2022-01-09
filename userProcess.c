@@ -1,8 +1,20 @@
 #include "config.h"
 
-void sendReportUser()
+void sendReportUser(pid_t userPid, int* msgReportUser)
 {
+    int code;
+    BufferReportUser* message = (BufferReportUser*)malloc(sizeof(BufferReportUser));
 
+    message->mtype = userPid;
+    message->dead = true;
+
+    code = msgsnd(*msgReportUser, message, sizeof(BufferReportUser), 0);
+    if(code == -1)
+    {
+        printf("Error in msgReportUser; sono il nodo %d e volevo trasmettere al master il report\n", userPid);
+        exit(EXIT_FAILURE);
+    }
+    //printf("%d terminato utente\n", userPid);
     exit(EXIT_SUCCESS);
 }
 
@@ -69,7 +81,7 @@ void createTransaction(Transaction* t, pid_t userPid, int balance)
     t->qty = amount - t->reward;
 }
 
-pid_t sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
+pid_t sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId, int* msgReportUser)
 {
     int code = -1;
     BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));
@@ -77,8 +89,7 @@ pid_t sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
 
     if(checkTerminationUser())
     {
-        printf("%d terminato utente send \n", userPid);
-        sendReportUser();
+        sendReportUser(userPid, msgReportUser);
     }
 
     createTransaction(t, userPid, balance);
@@ -91,22 +102,20 @@ pid_t sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
 
         if(checkTerminationUser())
         {
-            printf("%d terminato utente send \n", userPid);
-            sendReportUser();
+            sendReportUser(userPid, msgReportUser);
         }
     }
     return message->mtype;
 }
 
-bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
+bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node, int* msgReportUser)
 {
     int code = -1;
     BufferTransactionReply* message = (BufferTransactionReply*)malloc(sizeof(BufferTransactionReply));
 
     if(checkTerminationUser())
     {
-        printf("%d terminato utente send \n", userPid);
-        sendReportUser();
+        sendReportUser(userPid, msgReportUser);
     }
 
     while(code == -1)
@@ -115,17 +124,16 @@ bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
 
         if(checkTerminationUser())
         {
-            printf("%d terminato utente send \n", userPid);
-            sendReportUser();
+            sendReportUser(userPid, msgReportUser);
         }
     }
     return message->result;
 }
 
-void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
+void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportUser)
 {
     pid_t userPid = getpid();
-    printf("Creato processo utente Id: %d\n", userPid);
+    //printf("Creato processo utente Id: %d\n", userPid);
     int actual_retry = 0;
     int balance;
     pid_t node;
@@ -135,8 +143,8 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
         balance = calcBalance(userPid);
         if(balance >= 2)
         {
-            node = sendTransaction(userPid, balance, msgTransactionSendId);
-            if(getTransactionReply(userPid, msgTransactionReplyId, node) == 1)
+            node = sendTransaction(userPid, balance, msgTransactionSendId, msgReportUser);
+            if(getTransactionReply(userPid, msgTransactionReplyId, node, msgReportUser) == 1)
             {
                 actual_retry++;
             }
@@ -148,12 +156,15 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
 
         if(checkTerminationUser())
         {
-            printf("%d terminato utente send \n", userPid);
-            sendReportUser();
+            sendReportUser(userPid, msgReportUser);
         }
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     }
     //se ci si trova qui allora il processo per SO_RETRY volte non è riuscito a portare a termine la transazione -> deve terminare
-    printf("%d terminato utente dead\n", userPid);
+    //printf("%d terminato utente dead\n", userPid);
+    sem_wait(semDeadUsers);
+    deadUsers[0] = deadUsers[0] + 1;
+    sem_post(semDeadUsers);
+
     exit(EXIT_SUCCESS);
 }

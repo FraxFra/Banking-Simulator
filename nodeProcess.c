@@ -5,28 +5,27 @@ bool checkTerminationNode()
     return termination[0] == 0;
 }
 
-void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
+void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     int code;
-    BufferReport* message = (BufferReport*)malloc(sizeof(BufferReport));
+    BufferReportNode* message = (BufferReportNode*)malloc(sizeof(BufferReportNode));
 
     message->mtype = nodePid;
-    message->alive = 0;
     message->transactionPool = transactionPool;
 
-    code = msgsnd(*msgReport, message, sizeof(BufferReport), 0);
+    code = msgsnd(*msgReportNode, message, sizeof(BufferReportNode), 0);
     if(code == -1)
     {
-        printf("Error in msgReport; sono il nodo %d e volevo trasmettere al master il report\n", nodePid);
+        printf("Error in msgReportNode; sono il nodo %d e volevo trasmettere al master il report\n", nodePid);
         exit(EXIT_FAILURE);
     }
     sem_wait(semThread);
     sem_post(semThread);
-    printf("%d terminato nodo\n", nodePid);
+    //printf("%d terminato nodo\n", nodePid);
     exit(EXIT_SUCCESS);
 }
 
-void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
+void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread, int* msgReportNodeNode)
 {
     int i;
     int j = 0;
@@ -42,13 +41,12 @@ void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, 
         }
         nblocksRegistry[0] = nblocksRegistry[0] + 1;
         sem_post(semRegistry);
-        printf("Blocco in posizione %d inserito\n", actualTransactions);
+        //printf("Blocco in posizione %d inserito\n", actualTransactions);
     }
     else
     {
-        termination[0] = 0;
         sem_post(semRegistry);
-        sendReportNode(transactionPool, nodePid, msgReport, semThread);
+        sendReportNode(transactionPool, nodePid, msgReportNodeNode, semThread);
     }
 }
 
@@ -94,28 +92,28 @@ int checkTransaction(Transaction* transaction)
     return res;
 }
 
-int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
+int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     int i = rand() % SO_TP_SIZE;
     while(transactionPool[i] == NULL)
     {
         if(checkTerminationNode())
         {
-            sendReportNode(transactionPool, nodePid, msgReport, semThread);
+            sendReportNode(transactionPool, nodePid, msgReportNode, semThread);
         }
         i = rand() % SO_TP_SIZE;
     }
     return i;
 }
 
-void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread)
+void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     Transaction** transactionBlock = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
     int i;
     int blockIdx;
     for(blockIdx = 0; blockIdx < SO_BLOCK_SIZE - 1; blockIdx++)
     {
-        i = chooseTransaction(transactionPool, nodePid, msgReport, semThread);
+        i = chooseTransaction(transactionPool, nodePid, msgReportNode, semThread);
         if (checkTransaction(transactionPool[i]))
         {
             transactionBlock[blockIdx] = (Transaction*) malloc(sizeof(Transaction));
@@ -129,13 +127,13 @@ void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReport, s
 
         if(checkTerminationNode())
         {
-            sendReportNode(transactionPool, nodePid, msgReport, semThread);
+            sendReportNode(transactionPool, nodePid, msgReportNode, semThread);
         }
     }
 
     rewardTransaction(transactionBlock, nodePid);
     usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
-    insertBlock(transactionBlock, transactionPool, nodePid, msgReport, semThread);
+    insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
 }
 
 void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, bool res)
@@ -167,7 +165,7 @@ void* manageTransactions(void* args)
         if(checkTerminationNode())
         {
             sem_post(arguments->semThread);
-            printf("terminato thread\n" );
+            //printf("terminato thread\n" );
             pthread_exit(NULL);
         }
         else if (code != -1)
@@ -204,10 +202,10 @@ void initArgs(PthreadArguments* args, pid_t nodePid, Transaction** transactionPo
     args->semThread = semThread;
 }
 
-void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReport)
+void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
     pid_t nodePid = getpid();
-    printf("Creato processo nodo Id: %d\n", nodePid);
+    //printf("Creato processo nodo Id: %d\n", nodePid);
     int creationError;
     sem_t* semThread = (sem_t*)malloc(sizeof(sem_t));
     sem_init(semThread, 0, 1);
@@ -226,6 +224,6 @@ void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
 
     while(1)
     {
-        createBlock(transactionPool, nodePid, msgReport, semThread);
+        createBlock(transactionPool, nodePid, msgReportNode, semThread);
     }
 }

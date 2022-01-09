@@ -22,8 +22,8 @@
 #define CONFIG_FILE ".config"
 #endif
 
-#define SO_USERS_NUM 10
-#define SO_NODES_NUM 5
+#define SO_USERS_NUM 100
+#define SO_NODES_NUM 10
 #define SO_REWARD 10
 #define SO_MIN_TRANS_GEN_NSEC 500000000
 #define SO_MAX_TRANS_GEN_NSEC 1000000000
@@ -32,9 +32,9 @@
 #define SO_BLOCK_SIZE 6
 #define SO_MIN_TRANS_PROC_NSEC 500000000
 #define SO_MAX_TRANS_PROC_NSEC 1000000000
-#define SO_REGISTRY_SIZE 10
+#define SO_REGISTRY_SIZE 30
 #define SO_BUDGET_INIT 50
-#define SO_SIM_SEC 4
+#define SO_SIM_SEC 400
 #define SO_FRIENDS_NUM 10
 
 typedef struct _Transaction
@@ -79,12 +79,17 @@ typedef struct _PthreadArguments
     sem_t* semThread;
 }PthreadArguments;
 
-typedef struct _BufferReport
+typedef struct _BufferReportUser
 {
     long mtype;
-    bool alive;
+    bool dead;
+}BufferReportUser;
+
+typedef struct _BufferReportNode
+{
+    long mtype;
     Transaction** transactionPool;
-}BufferReport;
+}BufferReportNode;
 
 extern Transaction* masterBookRegistry;
 extern int* nblocksRegistry;
@@ -92,7 +97,9 @@ extern pid_t* userProcesses;
 extern pid_t* nodeProcesses;
 extern pid_t* masterBookProcess;
 extern sem_t* semRegistry;
+extern sem_t* semDeadUsers;
 extern bool* termination;
+extern int* deadUsers;
 
 extern void masterStart();
 extern void userStart();
