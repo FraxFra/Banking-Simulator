@@ -22,17 +22,17 @@
 #define CONFIG_FILE ".config"
 #endif
 
-#define SO_USERS_NUM 100
+#define SO_USERS_NUM 10
 #define SO_NODES_NUM 10
 #define SO_REWARD 10
-#define SO_MIN_TRANS_GEN_NSEC 500000000
-#define SO_MAX_TRANS_GEN_NSEC 1000000000
-#define SO_RETRY 4
+#define SO_MIN_TRANS_GEN_NSEC 100000000
+#define SO_MAX_TRANS_GEN_NSEC 200000000
+#define SO_RETRY 1
 #define SO_TP_SIZE 3
 #define SO_BLOCK_SIZE 6
-#define SO_MIN_TRANS_PROC_NSEC 500000000
-#define SO_MAX_TRANS_PROC_NSEC 1000000000
-#define SO_REGISTRY_SIZE 30
+#define SO_MIN_TRANS_PROC_NSEC 10000000
+#define SO_MAX_TRANS_PROC_NSEC 20000000
+#define SO_REGISTRY_SIZE 10
 #define SO_BUDGET_INIT 50
 #define SO_SIM_SEC 400
 #define SO_FRIENDS_NUM 10
@@ -55,29 +55,8 @@ typedef struct _BufferTransactionSend
 typedef struct _BufferTransactionReply
 {
     long mtype;
-    bool result;
+    int result;
 }BufferTransactionReply;
-
-typedef struct _BufferBlockSend
-{
-    long mtype;
-    Transaction block[SO_BLOCK_SIZE];
-}BufferBlockSend;
-
-typedef struct _BufferBlockReply
-{
-    long mtype;
-    bool result;
-}BufferBlockReply;
-
-typedef struct _PthreadArguments
-{
-    pid_t nodePid;
-    Transaction** transactionPool;
-    int* msgTransactionSendId;
-    int* msgTransactionReplyId;
-    sem_t* semThread;
-}PthreadArguments;
 
 typedef struct _BufferReportUser
 {
@@ -91,14 +70,23 @@ typedef struct _BufferReportNode
     Transaction** transactionPool;
 }BufferReportNode;
 
+typedef struct _PthreadArguments
+{
+    pid_t nodePid;
+    Transaction** transactionPool;
+    int* msgTransactionSendId;
+    int* msgTransactionReplyId;
+    sem_t* semThread;
+}PthreadArguments;
+
 extern Transaction* masterBookRegistry;
 extern int* nblocksRegistry;
 extern pid_t* userProcesses;
 extern pid_t* nodeProcesses;
-extern pid_t* masterBookProcess;
 extern sem_t* semRegistry;
 extern sem_t* semDeadUsers;
-extern bool* termination;
+extern int* nblocksRegistry;
+extern int* termination;
 extern int* deadUsers;
 
 extern void masterStart();

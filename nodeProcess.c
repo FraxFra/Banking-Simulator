@@ -21,17 +21,18 @@ void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport
     }
     sem_wait(semThread);
     sem_post(semThread);
-    //printf("%d terminato nodo\n", nodePid);
     exit(EXIT_SUCCESS);
 }
 
 void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread, int* msgReportNodeNode)
 {
     int i;
-    int j = 0;
+    int j = 0;;
+    int z;
 
     sem_wait(semRegistry);
     int actualTransactions = nblocksRegistry[0] * SO_BLOCK_SIZE;
+    printf("blocco inseriti" );
     if(actualTransactions != SO_BLOCK_SIZE * SO_REGISTRY_SIZE)
     {
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
@@ -41,7 +42,6 @@ void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, 
         }
         nblocksRegistry[0] = nblocksRegistry[0] + 1;
         sem_post(semRegistry);
-        //printf("Blocco in posizione %d inserito\n", actualTransactions);
     }
     else
     {
@@ -130,9 +130,8 @@ void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReportNod
             sendReportNode(transactionPool, nodePid, msgReportNode, semThread);
         }
     }
-
     rewardTransaction(transactionBlock, nodePid);
-    usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
+    usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 100);
     insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
 }
 
@@ -148,6 +147,7 @@ void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId
         printf("Error in replyTransaction; sono il nodo %ld e volevo trasmettere all'utente %ld\n", message->mtype, messageReply->mtype);
         exit(EXIT_FAILURE);
     }
+    //deallocare buffer
 }
 
 void* manageTransactions(void* args)
@@ -205,23 +205,20 @@ void initArgs(PthreadArguments* args, pid_t nodePid, Transaction** transactionPo
 void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
     pid_t nodePid = getpid();
-    //printf("Creato processo nodo Id: %d\n", nodePid);
     int creationError;
     sem_t* semThread = (sem_t*)malloc(sizeof(sem_t));
     sem_init(semThread, 0, 1);
-
     Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
     PthreadArguments* args = (PthreadArguments*)malloc(sizeof(PthreadArguments));
     initArgs(args, nodePid, transactionPool, msgTransactionSendId, msgTransactionReplyId, semThread);
-
     pthread_t transactionPoolManager[1];
+    
     creationError = pthread_create(&transactionPoolManager[0], NULL, manageTransactions, (void*)args);
     if(creationError)
     {
         printf("Errore nella creazione del thread gestore della transactionPool\n");
         exit(EXIT_FAILURE);
     }
-
     while(1)
     {
         createBlock(transactionPool, nodePid, msgReportNode, semThread);
