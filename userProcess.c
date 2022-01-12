@@ -27,13 +27,15 @@ pid_t findNode()
 
 int calcReward(int amount)
 {
-    return (amount * SO_REWARD) / 100;
+    if(((amount * SO_REWARD) / 100)<1)
+      return 1;
+    else return (amount * SO_REWARD) / 100;
 }
 
 void createTransaction(Transaction* t, pid_t userPid, int balance)
 {
     srand(userPid * time(NULL));
-    int amount = rand() % balance + 1;
+    int amount = rand() % balance + 2;
     t->timestamp = clock();
     t->sender = userPid;
     t->receiver = findReceiver(userPid);
@@ -56,16 +58,16 @@ BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTrans
     message->mtype = findNode();
     message->transaction = *t;
 
-    while(code == -1)
-    {
-        code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), IPC_NOWAIT);
+//    while(code == -1)
+  //  {
+        code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend),0);
 
         if(checkTerminationUser())
         {
             printf("morto utente\n" );
             exit(EXIT_SUCCESS);
         }
-    }
+    //}
     return message;
 }
 
@@ -135,6 +137,8 @@ int calcBalance(Transaction** arrTransaction, pid_t userPid)
             res = res - masterBookRegistry[i].qty - masterBookRegistry[i].reward;
             for(j = 0; j < 100; j++)
             {
+              if(arrTransaction[j]!=NULL)
+              {
                 if(masterBookRegistry[i].sender == arrTransaction[j]->sender
                 && masterBookRegistry[i].receiver == arrTransaction[j]->receiver
                 && masterBookRegistry[i].timestamp == arrTransaction[j]->timestamp)
@@ -142,18 +146,22 @@ int calcBalance(Transaction** arrTransaction, pid_t userPid)
                     arrTransaction[j] = NULL;
                 }
             }
+          }
         }
-        else if(masterBookRegistry[i].receiver == userPid)
+         if(masterBookRegistry[i].receiver == userPid)
         {
             res = res + masterBookRegistry[i].qty;
             for(j = 0; j < 100; j++)
             {
+              if(arrTransaction[j]!=NULL)
+              {
                 if(masterBookRegistry[i].sender == arrTransaction[j]->sender
                 && masterBookRegistry[i].receiver == arrTransaction[j]->receiver
                 && masterBookRegistry[i].timestamp == arrTransaction[j]->timestamp)
                 {
                     arrTransaction[j] = NULL;
                 }
+              }
             }
         }
     }

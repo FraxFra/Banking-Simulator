@@ -151,14 +151,14 @@ void initBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msg
         exit(EXIT_FAILURE);
     }
 
-    *msgReportUser = msgget(2, IPC_CREAT | S_IRUSR | S_IWUSR);
+    /**msgReportUser = msgget(2, IPC_CREAT | S_IRUSR | S_IWUSR);
     if(*msgReportUser == -1)
     {
         printf("Errore nella creazione dell'id msgReportUser\n");
         exit(EXIT_FAILURE);
-    }
+    }*/
 
-    *msgReportNode = msgget(3, IPC_CREAT | S_IRUSR | S_IWUSR);
+    *msgReportNode = msgget(2, IPC_CREAT | S_IRUSR | S_IWUSR);
     if(*msgReportNode == -1)
     {
         printf("Errore nella creazione dell'id msgReportNode\n");
@@ -183,12 +183,12 @@ void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* 
         exit(EXIT_FAILURE);
     }
 
-    code = msgctl(*msgReportUser, IPC_RMID, NULL);
+  /*  code = msgctl(*msgReportUser, IPC_RMID, NULL);
     if(code == -1)
     {
         printf("Errore con la rimozione dell'id msgReportUser\n");
         exit(EXIT_FAILURE);
-    }
+    }*/
 
     code = msgctl(*msgReportNode, IPC_RMID, NULL);
     if(code == -1)
@@ -234,7 +234,6 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
             else if(pid == 0)
             {
                 userProcesses[i] = getpid();
-                //deallocare p
                 userStart(msgTransactionSendId, msgTransactionReplyId, msgReportUser, i);
             }
         }
@@ -300,6 +299,7 @@ void* printStatus()
         sleep(1);
         //system("clear");
     }
+  pthread_exit(NULL);
 }
 
 int setTermination(int* terminationReason, int* msgReportUser)
@@ -338,7 +338,26 @@ int setTermination(int* terminationReason, int* msgReportUser)
 
     }
 }
-
+int checkDuplicates()
+{
+    int i;
+    int j;
+    int res=1;
+    for(i=0;i<nblocksRegistry[0]*SO_BLOCK_SIZE;i++)
+    {
+      for(j=0;j<nblocksRegistry[0]*SO_BLOCK_SIZE;j++)
+      {
+        if(masterBookRegistry[i].timestamp == masterBookRegistry[j].timestamp
+        && masterBookRegistry[i].sender == masterBookRegistry[j].sender
+        && masterBookRegistry[i].receiver == masterBookRegistry[j].receiver
+        &&j!=i)
+        {
+          res=0;
+        }
+      }
+    }
+    return res;
+}
 void masterStart()
 {
     pid_t masterPid = getpid();
@@ -355,7 +374,7 @@ void masterStart()
     createProcesses(masterPid, &msgTransactionSendId, &msgTransactionReplyId, &msgReportUser, &msgReportNode);
     setTermination(&terminationReason, &msgReportUser);
     while(wait(NULL) > 0);
-
+    printf("%d\n",checkDuplicates());
     deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportUser, &msgReportNode);
     unMapSharedMemory();
     exit(EXIT_SUCCESS);

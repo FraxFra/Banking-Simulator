@@ -58,11 +58,11 @@ typedef struct _BufferTransactionReply
     int result;
 }BufferTransactionReply;
 
-typedef struct _BufferReportUser
+/*typedef struct _BufferReportUser
 {
     long mtype;
     bool dead;
-}BufferReportUser;
+}BufferReportUser;*/
 
 typedef struct _BufferReportNode
 {

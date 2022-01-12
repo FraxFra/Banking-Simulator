@@ -24,7 +24,7 @@ void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport
     exit(EXIT_SUCCESS);
 }
 
-void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread, int* msgReportNodeNode)
+void insertBlock(Transaction* transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread, int* msgReportNodeNode)
 {
     int i;
     int j = 0;;
@@ -32,13 +32,13 @@ void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, 
 
     sem_wait(semRegistry);
     int actualTransactions = nblocksRegistry[0] * SO_BLOCK_SIZE;
-    printf("blocco inseriti" );
     if(actualTransactions != SO_BLOCK_SIZE * SO_REGISTRY_SIZE)
-    {
+    {   printf("blocco inserito\n" );
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
         {
-            masterBookRegistry[i] = *transactionBlock[j];
+            masterBookRegistry[i] = transactionBlock[j];
             j++;
+            printf("LIBRO MASTRO:time %ld sender %d receiver %d qty %d rewd %d \n",masterBookRegistry[i].timestamp,masterBookRegistry[i].sender,masterBookRegistry[i].receiver,masterBookRegistry[i].qty,masterBookRegistry[i].reward);
         }
         nblocksRegistry[0] = nblocksRegistry[0] + 1;
         sem_post(semRegistry);
@@ -50,18 +50,18 @@ void insertBlock(Transaction** transactionBlock, Transaction** transactionPool, 
     }
 }
 
-int getQuantities(Transaction** transactionBlock)
+int getQuantities(Transaction* transactionBlock)
 {
     int i;
     int res = 0;
     for(i = 0; i < SO_BLOCK_SIZE - 1; i++)
     {
-        res = res + transactionBlock[i]->reward;
+        res = res + transactionBlock[i].reward;
     }
     return res;
 }
 
-void rewardTransaction(Transaction** transactionBlock, pid_t nodePid)
+void rewardTransaction(Transaction* transactionBlock, pid_t nodePid)
 {
     Transaction* rewardTransaction = (Transaction*)malloc(sizeof(Transaction));
     rewardTransaction->timestamp = clock();
@@ -69,13 +69,26 @@ void rewardTransaction(Transaction** transactionBlock, pid_t nodePid)
     rewardTransaction->reward = 0;
     rewardTransaction->qty = getQuantities(transactionBlock);
     rewardTransaction->receiver = nodePid;
-    transactionBlock[SO_BLOCK_SIZE - 1] = rewardTransaction;
+    transactionBlock[SO_BLOCK_SIZE - 1] = *rewardTransaction;
 }
-
-int checkTransaction(Transaction* transaction)
+int checkTransactionBlock(Transaction* transaction,int x,Transaction* transactionBlock)
+{
+  int i;
+  int res=1;
+  for(i=0;i<x;i++)
+  {
+    if(transactionBlock[i].timestamp == transaction->timestamp
+    && transactionBlock[i].sender == transaction->sender
+    && transactionBlock[i].receiver == transaction->receiver)
+    {
+        res = 0;
+    }
+  }
+  return res;
+}
+int checkTransactionRegistry(Transaction* transaction)
 {
     int i;
-    int j;
     int res = 1;
     if(masterBookRegistry != NULL && nblocksRegistry != NULL)
     {
@@ -108,21 +121,22 @@ int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgRepo
 
 void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
-    Transaction** transactionBlock = (Transaction**)malloc(sizeof(Transaction*) * SO_BLOCK_SIZE);
+    Transaction* transactionBlock = (Transaction*)malloc(sizeof(Transaction) * SO_BLOCK_SIZE);
     int i;
     int blockIdx;
     for(blockIdx = 0; blockIdx < SO_BLOCK_SIZE - 1; blockIdx++)
     {
         i = chooseTransaction(transactionPool, nodePid, msgReportNode, semThread);
-        if (checkTransaction(transactionPool[i]))
+        if (checkTransactionRegistry(transactionPool[i])==1&&checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock)==1)
         {
-            transactionBlock[blockIdx] = (Transaction*) malloc(sizeof(Transaction));
-            transactionBlock[blockIdx] = transactionPool[i];
+            //transactionBlock[blockIdx] = (Transaction*) malloc(sizeof(Transaction));
+            transactionBlock[blockIdx] = *transactionPool[i];
             transactionPool[i] = NULL;
+            //printf("BLOCCO:%d %d",transactionBlock[blockIdx],)
         }
         else
         {
-            blockIdx--; //per non lasciare transactionBlock[i] vuoto
+            blockIdx=blockIdx-1; //per non lasciare transactionBlock[i] vuoto
         }
 
         if(checkTerminationNode())
@@ -177,7 +191,8 @@ void* manageTransactions(void* args)
                 {
                     if(arguments->transactionPool[i] == NULL)
                     {
-                        arguments->transactionPool[i] = (Transaction*)malloc(sizeof(Transaction));
+                        printf("TRANSAZIONI APPROVATE: sender %d receiver %d qty %d rewd %d\n",message->transaction.sender,message->transaction.receiver,message->transaction.qty,message->transaction.reward);
+                        //arguments->transactionPool[i] = (Transaction*)malloc(sizeof(Transaction));
                         arguments->transactionPool[i] = &message->transaction;
                         replyTransaction(message, arguments->msgTransactionReplyId, 0);
                         findPlace = 0;
@@ -204,15 +219,18 @@ void initArgs(PthreadArguments* args, pid_t nodePid, Transaction** transactionPo
 
 void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
+    int i=0;
     pid_t nodePid = getpid();
     int creationError;
     sem_t* semThread = (sem_t*)malloc(sizeof(sem_t));
     sem_init(semThread, 0, 1);
     Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
+    for(i=0;i<SO_TP_SIZE;i++){
+      transactionPool[i] = (Transaction*)malloc(sizeof(Transaction));
+    }
     PthreadArguments* args = (PthreadArguments*)malloc(sizeof(PthreadArguments));
     initArgs(args, nodePid, transactionPool, msgTransactionSendId, msgTransactionReplyId, semThread);
     pthread_t transactionPoolManager[1];
-    
     creationError = pthread_create(&transactionPoolManager[0], NULL, manageTransactions, (void*)args);
     if(creationError)
     {
