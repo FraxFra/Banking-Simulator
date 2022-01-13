@@ -27,8 +27,8 @@ pid_t findNode()
 
 int calcReward(int amount)
 {
-    if(((amount * SO_REWARD) / 100)<1)
-      return 1;
+    if(((amount * SO_REWARD) / 100) < 1)
+        return 1;
     else return (amount * SO_REWARD) / 100;
 }
 
@@ -43,77 +43,41 @@ void createTransaction(Transaction* t, pid_t userPid, int balance)
     t->qty = amount - t->reward;
 }
 
-BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId, int* msgReportUser)
+BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
 {
     int code = -1;
     BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));
     Transaction* t = (Transaction*)malloc(sizeof(Transaction));
 
-    if(checkTerminationUser())
-    {
-        exit(EXIT_SUCCESS);
-    }
-
     createTransaction(t, userPid, balance);
     message->mtype = findNode();
     message->transaction = *t;
-
-//    while(code == -1)
-  //  {
-        code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend),0);
-
-        if(checkTerminationUser())
-        {
-            printf("morto utente\n" );
-            exit(EXIT_SUCCESS);
-        }
-    //}
+    code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0);
     return message;
 }
 
-bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node, int* msgReportUser)
+bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
 {
     int code = -1;
     int res;
-    if(checkTerminationUser())
-    {
-        exit(EXIT_SUCCESS);
-    }
-
     BufferTransactionReply* message = (BufferTransactionReply*)malloc(sizeof(BufferTransactionReply));
-    while(code == -1)
-    {
-        code = msgrcv(*msgTransactionReplyId, message, sizeof(BufferTransactionReply), userPid, IPC_NOWAIT);
 
-        if(checkTerminationUser())
-        {
-            exit(EXIT_SUCCESS);
-        }
-    }
+    code = msgrcv(*msgTransactionReplyId, message, sizeof(BufferTransactionReply), userPid, 0);
     res = message->result;
-    //deallocare message
+    free(message);
     return res;
 }
 
-void allocArrTransaction(Transaction** arrTransaction)
+void insertArrTransaction(Transaction* arrTransaction, BufferTransactionSend* message)
 {
-    int i;
-    for(i = 0; i < 100; i++)
-    {
-        arrTransaction[i] = (Transaction*)malloc(sizeof(Transaction));
-    }
-}
-
-void insertArrTransaction(Transaction** arrTransaction, BufferTransactionSend* message)
-{
-    int i;
+    int i = 0;
     int findPlace = 1;
 
-    for(i = 0; i < 100; i++)
+    for(i = 0; i < 50; i++)
     {
-        if(arrTransaction[i] != NULL && findPlace == 1)
+        if(arrTransaction[i].timestamp == -1 && findPlace == 1)
         {
-            arrTransaction[i] = &message->transaction;
+            arrTransaction[i] = message->transaction;
             findPlace = 0;
         }
     }
@@ -123,60 +87,60 @@ void insertArrTransaction(Transaction** arrTransaction, BufferTransactionSend* m
     }
 }
 
-int calcBalance(Transaction** arrTransaction, pid_t userPid)
+void initArrTransaction(Transaction* arrTransaction)
+{
+    int i;
+    for(i = 0; i < 50; i++)
+    {
+        arrTransaction[i].timestamp = -1;
+    }
+}
+
+int calcBalance(Transaction* arrTransaction, pid_t userPid)
 {
     int res = SO_BUDGET_INIT;
-    int i;
-    int j;
+    int i = 0;
+    int j = 0;
 
     sem_wait(semRegistry);
-    for(i = 0; i < nblocksRegistry[0] * SO_BLOCK_SIZE; i++)
+    for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
     {
         if(masterBookRegistry[i].sender == userPid)
         {
             res = res - masterBookRegistry[i].qty - masterBookRegistry[i].reward;
-            for(j = 0; j < 100; j++)
+            for(j = 0; j < 50; j++)
             {
-              if(arrTransaction[j]!=NULL)
-              {
-                if(masterBookRegistry[i].sender == arrTransaction[j]->sender
-                && masterBookRegistry[i].receiver == arrTransaction[j]->receiver
-                && masterBookRegistry[i].timestamp == arrTransaction[j]->timestamp)
+                if(masterBookRegistry[i].timestamp == arrTransaction[j].timestamp
+                && masterBookRegistry[i].receiver == arrTransaction[j].receiver
+                && masterBookRegistry[i].sender == arrTransaction[j].sender)
                 {
-                    arrTransaction[j] = NULL;
+                    arrTransaction[j].timestamp = -1;
                 }
             }
-          }
         }
-         if(masterBookRegistry[i].receiver == userPid)
+
+        if(masterBookRegistry[i].receiver == userPid)
         {
             res = res + masterBookRegistry[i].qty;
-            for(j = 0; j < 100; j++)
+            for(j = 0; j < 50; j++)
             {
-              if(arrTransaction[j]!=NULL)
-              {
-                if(masterBookRegistry[i].sender == arrTransaction[j]->sender
-                && masterBookRegistry[i].receiver == arrTransaction[j]->receiver
-                && masterBookRegistry[i].timestamp == arrTransaction[j]->timestamp)
+                if(masterBookRegistry[i].timestamp == arrTransaction[j].timestamp
+                && masterBookRegistry[i].receiver == arrTransaction[j].receiver
+                && masterBookRegistry[i].sender == arrTransaction[j].sender)
                 {
-                    arrTransaction[j] = NULL;
+                    arrTransaction[j].timestamp = -1;
                 }
-              }
             }
         }
     }
 
-    for(j = 0; j < 100; j++)
+    for(j = 0; j < 50; j++)
     {
-        if(arrTransaction[j] != NULL)
+        if(arrTransaction[j].timestamp != -1)
         {
-            if(arrTransaction[j]->sender == userPid)
+            if(arrTransaction[j].sender == userPid)
             {
-                res = res - arrTransaction[j]->qty - arrTransaction[j]->reward;
-            }
-            if(arrTransaction[j]->receiver == userPid)
-            {
-                res = res + arrTransaction[j]->qty;
+                res = res - arrTransaction[j].qty - arrTransaction[j].reward;
             }
         }
     }
@@ -184,24 +148,31 @@ int calcBalance(Transaction** arrTransaction, pid_t userPid)
     return res;
 }
 
-void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportUser, int index)
+void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
 {
     pid_t userPid = getpid();
     int actual_retry = 0;
     int balance = 0;
-    Transaction** arrTransaction = (Transaction**)malloc(sizeof(Transaction*) * 100);
-    BufferTransactionSend* message = (BufferTransactionSend*)malloc(sizeof(BufferTransactionSend));
-    allocArrTransaction(arrTransaction);
+    Transaction* arrTransaction = (Transaction*)malloc(sizeof(Transaction) * 50);
+    BufferTransactionSend* message;
+    initArrTransaction(arrTransaction);
 
     while(actual_retry <= SO_RETRY)
     {
+        if(checkTerminationUser())
+        {
+            free(arrTransaction);
+            sem_wait(semDeadUsers);
+            nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
+            sem_post(semDeadUsers);
+            exit(EXIT_SUCCESS);
+        }
+
         balance = calcBalance(arrTransaction, userPid);
-        //printf("%d %d\n", balance, userPid);
         if(balance >= 2)
         {
-            message = sendTransaction(userPid, balance, msgTransactionSendId, msgReportUser);
-            //printf("%d userpid %d rec %d qty %d rew ricevuti\n", userPid, message->transaction.receiver, message->transaction.qty, message->transaction.reward);
-            if(getTransactionReply(userPid, msgTransactionReplyId, message->mtype, msgReportUser) == 1)
+            message = sendTransaction(userPid, balance, msgTransactionSendId);
+            if(getTransactionReply(userPid, msgTransactionReplyId, message->mtype) == 1)
             {
                 actual_retry++;
             }
@@ -211,17 +182,13 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
                 insertArrTransaction(arrTransaction, message);
             }
         }
-
-        if(checkTerminationUser())
-        {
-            exit(EXIT_SUCCESS);
-        }
-
+        //free(message);
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     }
-    sem_wait(semDeadUsers);
-    deadUsers[0] = deadUsers[0] + 1;
-    sem_post(semDeadUsers);
 
+    sem_wait(semDeadUsers);
+    nDeadUsers[0] = nDeadUsers[0] + 1;
+    nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
+    sem_post(semDeadUsers);
     exit(EXIT_SUCCESS);
 }

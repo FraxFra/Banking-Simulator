@@ -23,17 +23,17 @@
 #endif
 
 #define SO_USERS_NUM 10
-#define SO_NODES_NUM 10
+#define SO_NODES_NUM 5
 #define SO_REWARD 10
 #define SO_MIN_TRANS_GEN_NSEC 100000000
 #define SO_MAX_TRANS_GEN_NSEC 200000000
-#define SO_RETRY 1
-#define SO_TP_SIZE 3
-#define SO_BLOCK_SIZE 6
+#define SO_RETRY 5
+#define SO_TP_SIZE 10
+#define SO_BLOCK_SIZE 5
 #define SO_MIN_TRANS_PROC_NSEC 10000000
 #define SO_MAX_TRANS_PROC_NSEC 20000000
-#define SO_REGISTRY_SIZE 10
-#define SO_BUDGET_INIT 50
+#define SO_REGISTRY_SIZE 50
+#define SO_BUDGET_INIT 1000
 #define SO_SIM_SEC 400
 #define SO_FRIENDS_NUM 10
 
@@ -58,36 +58,30 @@ typedef struct _BufferTransactionReply
     int result;
 }BufferTransactionReply;
 
-/*typedef struct _BufferReportUser
-{
-    long mtype;
-    bool dead;
-}BufferReportUser;*/
-
 typedef struct _BufferReportNode
 {
     long mtype;
-    Transaction** transactionPool;
+    int nTransactions;
 }BufferReportNode;
 
 typedef struct _PthreadArguments
 {
     pid_t nodePid;
-    Transaction** transactionPool;
+    Transaction* transactionPool;
     int* msgTransactionSendId;
     int* msgTransactionReplyId;
     sem_t* semThread;
 }PthreadArguments;
 
 extern Transaction* masterBookRegistry;
-extern int* nblocksRegistry;
 extern pid_t* userProcesses;
 extern pid_t* nodeProcesses;
 extern sem_t* semRegistry;
 extern sem_t* semDeadUsers;
-extern int* nblocksRegistry;
+extern int* nBlocksRegistry;
+extern int* nDeadUsers;
+extern int* nTerminatedUsers;
 extern int* termination;
-extern int* deadUsers;
 
 extern void masterStart();
 extern void userStart();

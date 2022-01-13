@@ -5,13 +5,21 @@ bool checkTerminationNode()
     return termination[0] == 0;
 }
 
-void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
+void sendReportNode(Transaction* transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     int code;
+    int j;
     BufferReportNode* message = (BufferReportNode*)malloc(sizeof(BufferReportNode));
 
     message->mtype = nodePid;
-    message->transactionPool = transactionPool;
+    message->nTransactions = 0;
+    for(j = 0; j < SO_TP_SIZE; j++)
+    {
+        if(transactionPool[j].timestamp != -1)
+        {
+            message->nTransactions = message->nTransactions + 1;
+        }
+    }
 
     code = msgsnd(*msgReportNode, message, sizeof(BufferReportNode), 0);
     if(code == -1)
@@ -24,23 +32,23 @@ void sendReportNode(Transaction** transactionPool, pid_t nodePid, int* msgReport
     exit(EXIT_SUCCESS);
 }
 
-void insertBlock(Transaction* transactionBlock, Transaction** transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread, int* msgReportNodeNode)
+void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread, int* msgReportNodeNode)
 {
     int i;
     int j = 0;;
     int z;
 
     sem_wait(semRegistry);
-    int actualTransactions = nblocksRegistry[0] * SO_BLOCK_SIZE;
+    int actualTransactions = nBlocksRegistry[0] * SO_BLOCK_SIZE;
     if(actualTransactions != SO_BLOCK_SIZE * SO_REGISTRY_SIZE)
-    {   printf("blocco inserito\n" );
+    {
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
         {
             masterBookRegistry[i] = transactionBlock[j];
             j++;
-            printf("LIBRO MASTRO:time %ld sender %d receiver %d qty %d rewd %d \n",masterBookRegistry[i].timestamp,masterBookRegistry[i].sender,masterBookRegistry[i].receiver,masterBookRegistry[i].qty,masterBookRegistry[i].reward);
+            //printf("LIBRO MASTRO:time %ld sender %d receiver %d qty %d rewd %d \n",masterBookRegistry[i].timestamp,masterBookRegistry[i].sender,masterBookRegistry[i].receiver,masterBookRegistry[i].qty,masterBookRegistry[i].reward);
         }
-        nblocksRegistry[0] = nblocksRegistry[0] + 1;
+        nBlocksRegistry[0] = nBlocksRegistry[0] + 1;
         sem_post(semRegistry);
     }
     else
@@ -63,52 +71,50 @@ int getQuantities(Transaction* transactionBlock)
 
 void rewardTransaction(Transaction* transactionBlock, pid_t nodePid)
 {
-    Transaction* rewardTransaction = (Transaction*)malloc(sizeof(Transaction));
-    rewardTransaction->timestamp = clock();
-    rewardTransaction->sender = -1;
-    rewardTransaction->reward = 0;
-    rewardTransaction->qty = getQuantities(transactionBlock);
-    rewardTransaction->receiver = nodePid;
-    transactionBlock[SO_BLOCK_SIZE - 1] = *rewardTransaction;
+    transactionBlock[SO_BLOCK_SIZE - 1].timestamp = clock();
+    transactionBlock[SO_BLOCK_SIZE - 1].sender = -1;
+    transactionBlock[SO_BLOCK_SIZE - 1].reward = 0;
+    transactionBlock[SO_BLOCK_SIZE - 1].qty = getQuantities(transactionBlock);
+    transactionBlock[SO_BLOCK_SIZE - 1].receiver = nodePid;
 }
-int checkTransactionBlock(Transaction* transaction,int x,Transaction* transactionBlock)
-{
-  int i;
-  int res=1;
-  for(i=0;i<x;i++)
-  {
-    if(transactionBlock[i].timestamp == transaction->timestamp
-    && transactionBlock[i].sender == transaction->sender
-    && transactionBlock[i].receiver == transaction->receiver)
-    {
-        res = 0;
-    }
-  }
-  return res;
-}
-int checkTransactionRegistry(Transaction* transaction)
+
+int checkTransactionBlock(Transaction transaction, int x, Transaction* transactionBlock)
 {
     int i;
     int res = 1;
-    if(masterBookRegistry != NULL && nblocksRegistry != NULL)
+    for(i = 0; i < x; i++)
     {
-        for(i = 0; i < nblocksRegistry[0] * SO_BLOCK_SIZE ; i++)
+        if(transactionBlock[i].timestamp == transaction.timestamp
+        && transactionBlock[i].sender == transaction.sender
+        && transactionBlock[i].receiver == transaction.receiver)
         {
-            if(masterBookRegistry[i].timestamp == transaction->timestamp
-            && masterBookRegistry[i].sender == transaction->sender
-            && masterBookRegistry[i].receiver == transaction->receiver)
-            {
-                res = 0;
-            }
+            res = 0;
         }
     }
     return res;
 }
 
-int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
+int checkTransactionRegistry(Transaction transaction)
+{
+    int i;
+    int res = 1;
+
+    for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE ; i++)
+    {
+        if(masterBookRegistry[i].timestamp == transaction.timestamp
+        && masterBookRegistry[i].sender == transaction.sender
+        && masterBookRegistry[i].receiver == transaction.receiver)
+        {
+            res = 0;
+        }
+    }
+    return res;
+}
+
+int chooseTransaction(Transaction* transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     int i = rand() % SO_TP_SIZE;
-    while(transactionPool[i] == NULL)
+    while(transactionPool[i].timestamp == -1)
     {
         if(checkTerminationNode())
         {
@@ -119,24 +125,23 @@ int chooseTransaction(Transaction** transactionPool, pid_t nodePid, int* msgRepo
     return i;
 }
 
-void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
+void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     Transaction* transactionBlock = (Transaction*)malloc(sizeof(Transaction) * SO_BLOCK_SIZE);
     int i;
     int blockIdx;
+
     for(blockIdx = 0; blockIdx < SO_BLOCK_SIZE - 1; blockIdx++)
     {
         i = chooseTransaction(transactionPool, nodePid, msgReportNode, semThread);
-        if (checkTransactionRegistry(transactionPool[i])==1&&checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock)==1)
+        if (checkTransactionRegistry(transactionPool[i]) == 1 && checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock) == 1 && transactionPool[i].timestamp != -1)
         {
-            //transactionBlock[blockIdx] = (Transaction*) malloc(sizeof(Transaction));
-            transactionBlock[blockIdx] = *transactionPool[i];
-            transactionPool[i] = NULL;
-            //printf("BLOCCO:%d %d",transactionBlock[blockIdx],)
+            transactionBlock[blockIdx] = transactionPool[i];
+            transactionPool[i].timestamp = -1;
         }
         else
         {
-            blockIdx=blockIdx-1; //per non lasciare transactionBlock[i] vuoto
+            blockIdx = blockIdx - 1;
         }
 
         if(checkTerminationNode())
@@ -144,24 +149,20 @@ void createBlock(Transaction** transactionPool, pid_t nodePid, int* msgReportNod
             sendReportNode(transactionPool, nodePid, msgReportNode, semThread);
         }
     }
+
     rewardTransaction(transactionBlock, nodePid);
-    usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 100);
+    usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
     insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
 }
 
-void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, bool res)
+void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, int res)
 {
     int code;
     BufferTransactionReply* messageReply = (BufferTransactionReply*)malloc(sizeof(BufferTransactionReply));
+
     messageReply->mtype = message->transaction.sender;
     messageReply->result = res;
-    code = msgsnd(*msgTransactionReplyId, messageReply, sizeof(BufferTransactionReply), 0);//bloccante
-    if(code == -1)
-    {
-        printf("Error in replyTransaction; sono il nodo %ld e volevo trasmettere all'utente %ld\n", message->mtype, messageReply->mtype);
-        exit(EXIT_FAILURE);
-    }
-    //deallocare buffer
+    code = msgsnd(*msgTransactionReplyId, messageReply, sizeof(BufferTransactionReply), 0);
 }
 
 void* manageTransactions(void* args)
@@ -176,11 +177,14 @@ void* manageTransactions(void* args)
     while(1)
     {
         code = msgrcv(*arguments->msgTransactionSendId, message, sizeof(BufferTransactionSend), arguments->nodePid, IPC_NOWAIT);
-        if(checkTerminationNode())
+        if(checkTerminationNode() && nTerminatedUsers[0] == SO_USERS_NUM)
         {
             sem_post(arguments->semThread);
-            //printf("terminato thread\n" );
             pthread_exit(NULL);
+        }
+        else if(checkTerminationNode() && nTerminatedUsers[0] != SO_USERS_NUM)
+        {
+            usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
         }
         else if (code != -1)
         {
@@ -189,11 +193,9 @@ void* manageTransactions(void* args)
             {
                 if(findPlace == 1)
                 {
-                    if(arguments->transactionPool[i] == NULL)
+                    if(arguments->transactionPool[i].timestamp == -1)
                     {
-                        printf("TRANSAZIONI APPROVATE: sender %d receiver %d qty %d rewd %d\n",message->transaction.sender,message->transaction.receiver,message->transaction.qty,message->transaction.reward);
-                        //arguments->transactionPool[i] = (Transaction*)malloc(sizeof(Transaction));
-                        arguments->transactionPool[i] = &message->transaction;
+                        arguments->transactionPool[i] = message->transaction;
                         replyTransaction(message, arguments->msgTransactionReplyId, 0);
                         findPlace = 0;
                     }
@@ -208,7 +210,7 @@ void* manageTransactions(void* args)
     }
 }
 
-void initArgs(PthreadArguments* args, pid_t nodePid, Transaction** transactionPool, int* msgTransactionSendId, int* msgTransactionReplyId, sem_t* semThread)
+void initArgs(PthreadArguments* args, pid_t nodePid, Transaction* transactionPool, int* msgTransactionSendId, int* msgTransactionReplyId, sem_t* semThread)
 {
     args->nodePid = nodePid;
     args->transactionPool = transactionPool;
@@ -217,19 +219,29 @@ void initArgs(PthreadArguments* args, pid_t nodePid, Transaction** transactionPo
     args->semThread = semThread;
 }
 
+void initTransactionPool(Transaction* transactionPool)
+{
+    int i;
+    for(i = 0; i < SO_TP_SIZE; i++)
+    {
+        transactionPool[i].timestamp = -1;
+    }
+}
+
 void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
-    int i=0;
     pid_t nodePid = getpid();
     int creationError;
+
     sem_t* semThread = (sem_t*)malloc(sizeof(sem_t));
     sem_init(semThread, 0, 1);
-    Transaction** transactionPool = (Transaction**)malloc(sizeof(Transaction*) * SO_TP_SIZE);
-    for(i=0;i<SO_TP_SIZE;i++){
-      transactionPool[i] = (Transaction*)malloc(sizeof(Transaction));
-    }
+
+    Transaction* transactionPool = (Transaction*)malloc(sizeof(Transaction) * SO_TP_SIZE);
+    initTransactionPool(transactionPool);
+
     PthreadArguments* args = (PthreadArguments*)malloc(sizeof(PthreadArguments));
     initArgs(args, nodePid, transactionPool, msgTransactionSendId, msgTransactionReplyId, semThread);
+
     pthread_t transactionPoolManager[1];
     creationError = pthread_create(&transactionPoolManager[0], NULL, manageTransactions, (void*)args);
     if(creationError)
@@ -237,6 +249,7 @@ void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
         printf("Errore nella creazione del thread gestore della transactionPool\n");
         exit(EXIT_FAILURE);
     }
+
     while(1)
     {
         createBlock(transactionPool, nodePid, msgReportNode, semThread);

@@ -1,14 +1,15 @@
 #include "config.h"
 
 Transaction* masterBookRegistry;
-int* nblocksRegistry;
 pid_t* userProcesses;
 pid_t* nodeProcesses;
 sem_t* semRegistry;
 sem_t* semDeadUsers;
-int* nblocksRegistry;
+int* nBlocksRegistry;
+int* nDeadUsers;
+int* nTerminatedUsers;
 int* termination;
-int* deadUsers;
+
 
 void mapSharedMemory()
 {
@@ -33,8 +34,8 @@ void mapSharedMemory()
         exit(EXIT_FAILURE);
     }
 
-    nblocksRegistry = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if(!nblocksRegistry)
+    nBlocksRegistry = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!nBlocksRegistry)
     {
         perror("la mappatura del masterBookBlockLength e' fallita");
         exit(EXIT_FAILURE);
@@ -56,13 +57,21 @@ void mapSharedMemory()
     }
     termination[0] = 1;
 
-    deadUsers = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if(!deadUsers)
+    nDeadUsers = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!nDeadUsers)
     {
-        perror("la mappatura del deadUsers e' fallita");
+        perror("la mappatura del nDeadUsers e' fallita");
         exit(EXIT_FAILURE);
     }
-    deadUsers[0] = 0;
+    nDeadUsers[0] = 0;
+
+    nTerminatedUsers = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if(!nTerminatedUsers)
+    {
+        perror("la mappatura del nTerminatedUsers e' fallita");
+        exit(EXIT_FAILURE);
+    }
+    nTerminatedUsers[0] = 0;
 
     semDeadUsers = mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if(!semDeadUsers)
@@ -98,7 +107,7 @@ void unMapSharedMemory()
         exit(EXIT_FAILURE);
     }
 
-    code = munmap(nblocksRegistry, sizeof(int));
+    code = munmap(nBlocksRegistry, sizeof(int));
     if(code == -1)
     {
         printf("Errore rimuovere la mappa masterBookBlockLength");
@@ -119,10 +128,17 @@ void unMapSharedMemory()
         exit(EXIT_FAILURE);
     }
 
-    code = munmap(deadUsers, sizeof(int));
+    code = munmap(nDeadUsers, sizeof(int));
     if(code == -1)
     {
-        printf("Errore rimuovere la mappa deadUsers");
+        printf("Errore rimuovere la mappa nDeadUsers");
+        exit(EXIT_FAILURE);
+    }
+
+    code = munmap(nTerminatedUsers, sizeof(int));
+    if(code == -1)
+    {
+        printf("Errore rimuovere la mappa nTerminatedUsers");
         exit(EXIT_FAILURE);
     }
 
@@ -135,7 +151,7 @@ void unMapSharedMemory()
 
 }
 
-void initBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportUser, int* msgReportNode)
+void initBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
     *msgTransactionSendId = msgget(0, IPC_CREAT | S_IRUSR | S_IWUSR);
     if(*msgTransactionSendId == -1)
@@ -151,13 +167,6 @@ void initBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msg
         exit(EXIT_FAILURE);
     }
 
-    /**msgReportUser = msgget(2, IPC_CREAT | S_IRUSR | S_IWUSR);
-    if(*msgReportUser == -1)
-    {
-        printf("Errore nella creazione dell'id msgReportUser\n");
-        exit(EXIT_FAILURE);
-    }*/
-
     *msgReportNode = msgget(2, IPC_CREAT | S_IRUSR | S_IWUSR);
     if(*msgReportNode == -1)
     {
@@ -166,7 +175,7 @@ void initBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msg
     }
 }
 
-void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportUser, int* msgReportNode)
+void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
     int code;
     code = msgctl(*msgTransactionSendId, IPC_RMID, NULL);
@@ -183,13 +192,6 @@ void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* 
         exit(EXIT_FAILURE);
     }
 
-  /*  code = msgctl(*msgReportUser, IPC_RMID, NULL);
-    if(code == -1)
-    {
-        printf("Errore con la rimozione dell'id msgReportUser\n");
-        exit(EXIT_FAILURE);
-    }*/
-
     code = msgctl(*msgReportNode, IPC_RMID, NULL);
     if(code == -1)
     {
@@ -198,7 +200,7 @@ void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* 
     }
 }
 
-void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportUser, int* msgReportNode)
+void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
     pid_t pid;
     int i;
@@ -216,7 +218,7 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
             else if(pid == 0)
             {
                 nodeProcesses[i] = getpid();
-                nodeStart(msgTransactionSendId, msgTransactionReplyId, msgReportNode, i);
+                nodeStart(msgTransactionSendId, msgTransactionReplyId, msgReportNode);
             }
         }
     }
@@ -234,7 +236,7 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
             else if(pid == 0)
             {
                 userProcesses[i] = getpid();
-                userStart(msgTransactionSendId, msgTransactionReplyId, msgReportUser, i);
+                userStart(msgTransactionSendId, msgTransactionReplyId, msgReportNode);
             }
         }
     }
@@ -245,7 +247,7 @@ int printBalanceNode(pid_t pid)
     int res = 0;
     int i;
 
-    for(i = 0; i < nblocksRegistry[0] * SO_BLOCK_SIZE; i++)
+    for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
     {
         if(masterBookRegistry[i].sender == -1 && pid == masterBookRegistry[i].receiver)
         {
@@ -260,7 +262,7 @@ int printBalanceUser(pid_t pid)
     int res = SO_BUDGET_INIT;
     int i;
 
-    for(i = 0; i < nblocksRegistry[0] * SO_BLOCK_SIZE; i++)
+    for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
     {
         if(masterBookRegistry[i].sender == pid)
         {
@@ -281,101 +283,145 @@ void* printStatus()
         int i, j;
 
         printf("----------------------------------\n" );
-        printf("numero di utenti attivi: %d\n", SO_USERS_NUM - deadUsers[0]);
+        printf("numero di utenti attivi: %d\n", SO_USERS_NUM - nDeadUsers[0]);
         printf("----------------------------------\n" );
-        if(masterBookRegistry != NULL && nblocksRegistry != NULL)
+        for(i = 0; i < SO_USERS_NUM ; i++)
         {
-            for(i = 0; i < SO_USERS_NUM ; i++)
-            {
-                printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
-            }
-            printf("----------------------------------\n" );
-            for(i = 0; i < SO_NODES_NUM ; i++)
-            {
-                printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
-            }
-            printf("----------------------------------\n" );
+            printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
         }
+        printf("----------------------------------\n" );
+        for(i = 0; i < SO_NODES_NUM ; i++)
+        {
+            printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
+        }
+        printf("----------------------------------\n" );
         sleep(1);
         //system("clear");
     }
-  pthread_exit(NULL);
+    pthread_exit(NULL);
 }
 
-int setTermination(int* terminationReason, int* msgReportUser)
+int setTermination()
 {
     clock_t begin = clock();
     clock_t end;
+    int res = -1;
     pthread_t printThread[1];
     pthread_create(&printThread[0], NULL, printStatus, NULL);
 
     while(termination[0] == 1)
     {
         end = clock();
-        if(((double)(end - begin) / CLOCKS_PER_SEC) >= SO_SIM_SEC && *terminationReason == -1)
+        if(((double)(end - begin) / CLOCKS_PER_SEC) >= SO_SIM_SEC && res == -1)
         {
             termination[0] = 0;
-            //printf("time\n");
-            *terminationReason = 0; //0 -> termination by time
+            res = 0; //0 -> termination by time
         }
-        else if((nblocksRegistry[0] * SO_BLOCK_SIZE == SO_BLOCK_SIZE * SO_REGISTRY_SIZE) && *terminationReason == -1)
+        else if((nBlocksRegistry[0] * SO_BLOCK_SIZE == SO_BLOCK_SIZE * SO_REGISTRY_SIZE) && res == -1)
         {
             termination[0] = 0;
-            //printf("size\n");
-            *terminationReason = 1; //1 -> termination by size
+            res = 1; //1 -> termination by size
         }
-        else if(*terminationReason == -1)
+        else if(res == -1)
         {
-            //deadUsers[0] = deadUsers[0] + checkUsersTermination(msgReportUser);
-            if(deadUsers[0] == SO_USERS_NUM)
+            if(nDeadUsers[0] == SO_USERS_NUM)
             {
                 termination[0] = 0;
-                //printf("users\n");
-                *terminationReason = 2; //2 -> termination by users
+                res = 2; //2 -> termination by users
             }
         }
-
-
     }
+    return res;
 }
+
 int checkDuplicates()
 {
     int i;
     int j;
-    int res=1;
-    for(i=0;i<nblocksRegistry[0]*SO_BLOCK_SIZE;i++)
+    int res = 1;
+
+    for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
     {
-      for(j=0;j<nblocksRegistry[0]*SO_BLOCK_SIZE;j++)
-      {
-        if(masterBookRegistry[i].timestamp == masterBookRegistry[j].timestamp
-        && masterBookRegistry[i].sender == masterBookRegistry[j].sender
-        && masterBookRegistry[i].receiver == masterBookRegistry[j].receiver
-        &&j!=i)
+        for(j = 0; j < nBlocksRegistry[0] * SO_BLOCK_SIZE; j++)
         {
-          res=0;
+            if(masterBookRegistry[i].timestamp == masterBookRegistry[j].timestamp
+            && masterBookRegistry[i].sender == masterBookRegistry[j].sender
+            && masterBookRegistry[i].receiver == masterBookRegistry[j].receiver
+            && j != i)
+            {
+                res = 0;
+            }
         }
-      }
     }
     return res;
 }
+
+void reasume(int terminationReason, int* msgReportNode)
+{
+    BufferReportNode* message = (BufferReportNode*)malloc(sizeof(BufferReportNode));
+    int i;
+    int res;
+
+    printf("----------------------------------\n" );
+    switch(terminationReason)
+    {
+        case 0:
+        printf("Il programma e' terminato per mancanza di tempo\n" );
+        break;
+
+        case 1:
+        printf("Il programma e' terminato per esaurimento di spazio nel libro mastro\n" );
+        break;
+
+        case 2:
+        printf("Il programma e' terminato a causa della terminazione di tutti gli utenti\n" );
+        break;
+    }
+    printf("----------------------------------\n" );
+
+    if(masterBookRegistry != NULL && nBlocksRegistry != NULL)
+    {
+        for(i = 0; i < SO_USERS_NUM ; i++)
+        {
+            printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
+        }
+        printf("----------------------------------\n" );
+        for(i = 0; i < SO_NODES_NUM ; i++)
+        {
+            printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
+        }
+        printf("----------------------------------\n" );
+    }
+
+    printf("il numero di processi utente terminati prematuramente e' %d\n", nDeadUsers[0]);
+    printf("----------------------------------\n" );
+    printf("il numero di blocchi nel libro mastro e' %d\n", nBlocksRegistry[0]);
+    printf("----------------------------------\n" );
+
+    for(i = 0; i < SO_NODES_NUM; i++)
+    {
+        msgrcv(*msgReportNode, message, sizeof(BufferReportNode), 0, 0);
+        printf("il nodo %ld ha %d transazioni rimanenti nella transactionPool\n", message->mtype, message->nTransactions);
+    }
+    printf("----------------------------------\n" );
+}
+
 void masterStart()
 {
     pid_t masterPid = getpid();
-    //printf("Creato processo master: %d\n", masterPid);
-
     int msgTransactionSendId;
     int msgTransactionReplyId;
-    int msgReportUser;
     int msgReportNode;
-    int terminationReason = -1;
+    int terminationReason;
 
     mapSharedMemory();
-    initBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportUser, &msgReportNode);
-    createProcesses(masterPid, &msgTransactionSendId, &msgTransactionReplyId, &msgReportUser, &msgReportNode);
-    setTermination(&terminationReason, &msgReportUser);
+    initBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
+    createProcesses(masterPid, &msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
+    terminationReason = setTermination();
     while(wait(NULL) > 0);
-    printf("%d\n",checkDuplicates());
-    deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportUser, &msgReportNode);
+    sleep(2);
+    reasume(terminationReason, &msgReportNode);
+    deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
     unMapSharedMemory();
     exit(EXIT_SUCCESS);
 }
