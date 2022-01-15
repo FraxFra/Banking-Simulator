@@ -249,6 +249,7 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
 
 int printBalanceNode(pid_t pid)
 {
+
     int res = 0;
     int i;
 
@@ -277,6 +278,7 @@ int printBalanceUser(pid_t pid)
         {
             res = res + masterBookRegistry[i].qty;
         }
+        //printf("%d\n",masterBookRegistry[i].qty);
     }
     return res;
 }
@@ -301,7 +303,7 @@ void* printStatus()
         }
         printf("----------------------------------\n" );
         sleep(1);
-        system("clear");
+        //system("clear");
     }
     pthread_exit(NULL);
 }
@@ -311,18 +313,20 @@ int setTermination()
     clock_t begin = clock();
     clock_t end;
     int res = -1;
-    //pthread_t printThread[1];
-    //pthread_create(&printThread[0], NULL, printStatus, NULL);
+    pthread_t printThread[1];
+    pthread_create(&printThread[0], NULL, printStatus, NULL);
 
     while(termination[0] == 1)
     {
+      //printf("sono verso la fine %d %d\n",nBlocksRegistry[0],termination[0]);
         end = clock();
         if(((double)(end - begin) / CLOCKS_PER_SEC) >= SO_SIM_SEC && res == -1)
         {
             termination[0] = 0;
             res = 0; //0 -> termination by time
+
         }
-        else if((nBlocksRegistry[0] * SO_BLOCK_SIZE == SO_BLOCK_SIZE * SO_REGISTRY_SIZE) && res == -1)
+        else if(((nBlocksRegistry[0]+1)* SO_BLOCK_SIZE == SO_BLOCK_SIZE * SO_REGISTRY_SIZE) && res == -1)
         {
             termination[0] = 0;
             res = 1; //1 -> termination by size
@@ -336,6 +340,7 @@ int setTermination()
             }
         }
     }
+    printf("finito\n");
     return res;
 }
 
@@ -425,7 +430,7 @@ void masterStart()
     terminationReason = setTermination();
     while(wait(NULL) > 0);
     sleep(2);
-    //reasume(terminationReason, &msgReportNode);
+    reasume(terminationReason, &msgReportNode);
     deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
     unMapSharedMemory();
     killProcesses();

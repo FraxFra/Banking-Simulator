@@ -30,6 +30,7 @@ void sendReportNode(Transaction* transactionPool, pid_t nodePid, int* msgReportN
     free(message);
     sem_wait(semThread);
     sem_post(semThread);
+    printf("LA MOOORTEEE nodo\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -45,18 +46,22 @@ void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pi
     {
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
         {
+            //printf("%d\n",i);
             masterBookRegistry[i] = transactionBlock[j];
             j++;
+
         }
         nBlocksRegistry[0] = nBlocksRegistry[0] + 1;
-        printf("blocco inserito\n");
+        printf("blocco inserito %d\n %d\n",nBlocksRegistry[0],actualTransactions);
         sem_post(semRegistry);
     }
     else
     {
         sem_post(semRegistry);
+        printf("Finito lo spazio");
         sendReportNode(transactionPool, nodePid, msgReportNodeNode, semThread);
     }
+
 }
 
 int getQuantities(Transaction* transactionBlock)
@@ -135,9 +140,11 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
     for(blockIdx = 0; blockIdx < SO_BLOCK_SIZE - 1; blockIdx++)
     {
         i = chooseTransaction(transactionPool, nodePid, msgReportNode, semThread);
+          printf("MI SON ROTTO IL CAZZO ALTRO CHE BUFFERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %d\n",transactionPool[i].qty);
         if (checkTransactionRegistry(transactionPool[i]) == 1 && checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock) == 1 && transactionPool[i].timestamp != -1)
         {
             transactionBlock[blockIdx] = transactionPool[i];
+
             transactionPool[i].timestamp = -1;
         }
         else
@@ -147,6 +154,7 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
 
         if(checkTerminationNode())
         {
+
             sendReportNode(transactionPool, nodePid, msgReportNode, semThread);
         }
     }
@@ -154,6 +162,7 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
     rewardTransaction(transactionBlock, nodePid);
     usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
     insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
+
     free(transactionBlock);
 }
 

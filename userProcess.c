@@ -41,8 +41,8 @@ int calcReward(int amount)
 void createTransaction(Transaction* t, pid_t userPid, int balance)
 {
     srand(userPid * time(NULL));
-    int amount = (rand() % balance) + 2;
-    printf("%d\n", userPid);
+    int amount = (rand() % (balance-2+1))+2;
+    //printf("usr:%d balance:%d amount:%d\n", userPid,balance,amount);
     t->timestamp = clock();
     t->sender = userPid;
     t->receiver = findReceiver(userPid);
@@ -60,6 +60,7 @@ BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTrans
     message->mtype = findNode();
     message->transaction = *t;
     code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0);
+    printf("Ho inviato %d balance: %d qty:%d\n",userPid,balance,t->qty);
     //free(t);
     //free(message);
     return message;
@@ -73,6 +74,7 @@ bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
 
     code = msgrcv(*msgTransactionReplyId, message, sizeof(BufferTransactionReply), userPid, 0);
     res = message->result;
+    printf("Ho ricevuto %d\n",userPid);
     return res;
 }
 
@@ -173,6 +175,7 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
             sem_wait(semDeadUsers);
             nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
             sem_post(semDeadUsers);
+            printf("utente LA MOOORTEEE\n");
             exit(EXIT_SUCCESS);
         }
 
@@ -190,6 +193,10 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
                 insertArrTransaction(arrTransaction, message);
             }
         }
+        else{
+            printf("balance %d %d\n",userPid,balance);
+            sleep(1);
+        }
         //free(message);
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     }
@@ -199,5 +206,8 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     nDeadUsers[0] = nDeadUsers[0] + 1;
     nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
     sem_post(semDeadUsers);
+    printf("utente LA MOOORTEEE\n");
     exit(EXIT_SUCCESS);
+
+
 }
