@@ -60,7 +60,7 @@ BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTrans
     message->mtype = findNode();
     message->transaction = *t;
     code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0);
-    printf("Ho inviato %d balance: %d qty:%d\n",userPid,balance,t->qty);
+    //printf("Ho inviato %d balance: %d qty:%d\n",userPid,balance,t->qty);
     //free(t);
     //free(message);
     return message;
@@ -74,7 +74,7 @@ bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
 
     code = msgrcv(*msgTransactionReplyId, message, sizeof(BufferTransactionReply), userPid, 0);
     res = message->result;
-    printf("Ho ricevuto %d\n",userPid);
+    //printf("Ho ricevuto %d\n",userPid);
     return res;
 }
 
@@ -171,7 +171,7 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     {
         if(checkTerminationUser())
         {
-            free(arrTransaction);
+            //free(arrTransaction);
             sem_wait(semDeadUsers);
             nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
             sem_post(semDeadUsers);
@@ -194,7 +194,7 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
             }
         }
         else{
-            printf("balance %d %d\n",userPid,balance);
+            //printf("balance %d %d\n",userPid,balance);
             sleep(1);
         }
         //free(message);

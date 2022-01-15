@@ -22,19 +22,19 @@
 #define CONFIG_FILE ".config"
 #endif
 
-#define SO_USERS_NUM 10
+#define SO_USERS_NUM 100
 #define SO_NODES_NUM 5
 #define SO_REWARD 20
 #define SO_MIN_TRANS_GEN_NSEC 10000000
 #define SO_MAX_TRANS_GEN_NSEC 20000000
 #define SO_RETRY 10
 #define SO_TP_SIZE 100
-#define SO_BLOCK_SIZE 1
+#define SO_BLOCK_SIZE 3
 #define SO_MIN_TRANS_PROC_NSEC 1000000
 #define SO_MAX_TRANS_PROC_NSEC 1000000
-#define SO_REGISTRY_SIZE 1000
+#define SO_REGISTRY_SIZE 100
 #define SO_BUDGET_INIT 10000
-#define SO_SIM_SEC 20
+#define SO_SIM_SEC 50
 #define SO_FRIENDS_NUM 3
 
 typedef struct _Transaction

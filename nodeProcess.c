@@ -5,7 +5,7 @@ bool checkTerminationNode()
     return termination[0] == 0;
 }
 
-void sendReportNode(Transaction* transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
+void sendReportNode(Transaction* transactionPool, Transaction* transactionBlock, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     int code;
     int j;
@@ -17,7 +17,15 @@ void sendReportNode(Transaction* transactionPool, pid_t nodePid, int* msgReportN
     {
         if(transactionPool[j].timestamp != -1)
         {
-            message->nTransactions = message->nTransactions + 1;
+            message->nTransactions += 1;
+        }
+    }
+
+    for(j = 0; j < SO_BLOCK_SIZE; j++)
+    {
+        if(transactionBlock[j].timestamp != -1)
+        {
+            message->nTransactions += 1;
         }
     }
 
@@ -27,7 +35,7 @@ void sendReportNode(Transaction* transactionPool, pid_t nodePid, int* msgReportN
         printf("Error in msgReportNode; sono il nodo %d e volevo trasmettere al master il report\n", nodePid);
         exit(EXIT_FAILURE);
     }
-    free(message);
+    //free(message);
     sem_wait(semThread);
     sem_post(semThread);
     printf("LA MOOORTEEE nodo\n");
@@ -47,19 +55,21 @@ void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pi
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
         {
             //printf("%d\n",i);
+            //printf("%d\n", masterBookRegistry[i].qty);
             masterBookRegistry[i] = transactionBlock[j];
             j++;
 
+
         }
         nBlocksRegistry[0] = nBlocksRegistry[0] + 1;
-        printf("blocco inserito %d\n %d\n",nBlocksRegistry[0],actualTransactions);
+        //printf("blocco inserito %d\n %d\n",nBlocksRegistry[0],actualTransactions);
         sem_post(semRegistry);
     }
     else
     {
         sem_post(semRegistry);
         printf("Finito lo spazio");
-        sendReportNode(transactionPool, nodePid, msgReportNodeNode, semThread);
+        sendReportNode(transactionPool, transactionBlock, nodePid, msgReportNodeNode, semThread);
     }
 
 }
@@ -117,14 +127,14 @@ int checkTransactionRegistry(Transaction transaction)
     return res;
 }
 
-int chooseTransaction(Transaction* transactionPool, pid_t nodePid, int* msgReportNode, sem_t* semThread)
+int chooseTransaction(Transaction* transactionPool, Transaction* transactionBlock, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     int i = rand() % SO_TP_SIZE;
     while(transactionPool[i].timestamp == -1)
     {
         if(checkTerminationNode())
         {
-            sendReportNode(transactionPool, nodePid, msgReportNode, semThread);
+            sendReportNode(transactionPool, transactionBlock, nodePid, msgReportNode, semThread);
         }
         i = rand() % SO_TP_SIZE;
     }
@@ -135,35 +145,33 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
 {
     Transaction* transactionBlock = (Transaction*)malloc(sizeof(Transaction) * SO_BLOCK_SIZE);
     int i;
-    int blockIdx;
+    int blockIdx = 0;
 
-    for(blockIdx = 0; blockIdx < SO_BLOCK_SIZE - 1; blockIdx++)
+    while(blockIdx < SO_BLOCK_SIZE - 1)
     {
-        i = chooseTransaction(transactionPool, nodePid, msgReportNode, semThread);
-          printf("MI SON ROTTO IL CAZZO ALTRO CHE BUFFERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR %d\n",transactionPool[i].qty);
+        i = chooseTransaction(transactionPool, transactionBlock, nodePid, msgReportNode, semThread);
+          //printf("MI SON ROTTO IL CAZZO ALTRO CHE BUFFERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR \n");
         if (checkTransactionRegistry(transactionPool[i]) == 1 && checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock) == 1 && transactionPool[i].timestamp != -1)
         {
             transactionBlock[blockIdx] = transactionPool[i];
-
+            //printf("%d block\n", transactionBlock[blockIdx].qty);
             transactionPool[i].timestamp = -1;
-        }
-        else
-        {
-            blockIdx = blockIdx - 1;
+            blockIdx++;
         }
 
         if(checkTerminationNode())
         {
 
-            sendReportNode(transactionPool, nodePid, msgReportNode, semThread);
+            sendReportNode(transactionPool, transactionBlock, nodePid, msgReportNode, semThread);
         }
     }
-
+    //printf("%d\n", transactionBlock[0].qty);
     rewardTransaction(transactionBlock, nodePid);
+
     usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
     insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
 
-    free(transactionBlock);
+    //free(transactionBlock);
 }
 
 void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, int res)
@@ -174,7 +182,7 @@ void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId
     messageReply->mtype = message->transaction.sender;
     messageReply->result = res;
     code = msgsnd(*msgTransactionReplyId, messageReply, sizeof(BufferTransactionReply), 0);
-    free(messageReply);
+    //free(messageReply);
 }
 
 void* manageTransactions(void* args)
@@ -192,8 +200,8 @@ void* manageTransactions(void* args)
         if(checkTerminationNode() && nTerminatedUsers[0] == SO_USERS_NUM)
         {
             sem_post(arguments->semThread);
-            free(message);
-            free(args);
+            //free(message);
+            //free(args);
             pthread_exit(NULL);
         }
         else if(checkTerminationNode() && nTerminatedUsers[0] != SO_USERS_NUM)
@@ -261,9 +269,9 @@ void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
     if(creationError)
     {
         printf("Errore nella creazione del thread gestore della transactionPool\n");
-        free(semThread);
-        free(transactionPool);
-        free(args);
+        //free(semThread);
+        //free(transactionPool);
+        //free(args);
         exit(EXIT_FAILURE);
     }
 

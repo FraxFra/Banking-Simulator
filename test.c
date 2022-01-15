@@ -326,7 +326,7 @@ int setTermination()
             res = 0; //0 -> termination by time
 
         }
-        else if(((nBlocksRegistry[0]+1)* SO_BLOCK_SIZE == SO_BLOCK_SIZE * SO_REGISTRY_SIZE) && res == -1)
+        else if((nBlocksRegistry[0]* SO_BLOCK_SIZE == SO_BLOCK_SIZE * SO_REGISTRY_SIZE) && res == -1)
         {
             termination[0] = 0;
             res = 1; //1 -> termination by size
