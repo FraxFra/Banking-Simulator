@@ -27,15 +27,22 @@ pid_t findNode()
 
 int calcReward(int amount)
 {
-    if(((amount * SO_REWARD) / 100) < 1)
+    int res = ((amount * SO_REWARD) / 100);
+    if(res < 1)
+    {
         return 1;
-    else return (amount * SO_REWARD) / 100;
+    }
+    else
+    {
+        return res;
+    }
 }
 
 void createTransaction(Transaction* t, pid_t userPid, int balance)
 {
     srand(userPid * time(NULL));
-    int amount = rand() % balance + 2;
+    int amount = (rand() % balance) + 2;
+    printf("%d\n", userPid);
     t->timestamp = clock();
     t->sender = userPid;
     t->receiver = findReceiver(userPid);
@@ -53,6 +60,8 @@ BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTrans
     message->mtype = findNode();
     message->transaction = *t;
     code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0);
+    //free(t);
+    //free(message);
     return message;
 }
 
@@ -64,7 +73,6 @@ bool getTransactionReply(pid_t userPid, int* msgTransactionReplyId, pid_t node)
 
     code = msgrcv(*msgTransactionReplyId, message, sizeof(BufferTransactionReply), userPid, 0);
     res = message->result;
-    free(message);
     return res;
 }
 
@@ -187,6 +195,7 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     }
 
     sem_wait(semDeadUsers);
+    free(arrTransaction);
     nDeadUsers[0] = nDeadUsers[0] + 1;
     nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
     sem_post(semDeadUsers);

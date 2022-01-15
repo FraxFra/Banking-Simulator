@@ -27,6 +27,7 @@ void sendReportNode(Transaction* transactionPool, pid_t nodePid, int* msgReportN
         printf("Error in msgReportNode; sono il nodo %d e volevo trasmettere al master il report\n", nodePid);
         exit(EXIT_FAILURE);
     }
+    free(message);
     sem_wait(semThread);
     sem_post(semThread);
     exit(EXIT_SUCCESS);
@@ -35,7 +36,7 @@ void sendReportNode(Transaction* transactionPool, pid_t nodePid, int* msgReportN
 void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pid_t nodePid, int* msgReport, sem_t* semThread, int* msgReportNodeNode)
 {
     int i;
-    int j = 0;;
+    int j = 0;
     int z;
 
     sem_wait(semRegistry);
@@ -46,9 +47,9 @@ void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pi
         {
             masterBookRegistry[i] = transactionBlock[j];
             j++;
-            //printf("LIBRO MASTRO:time %ld sender %d receiver %d qty %d rewd %d \n",masterBookRegistry[i].timestamp,masterBookRegistry[i].sender,masterBookRegistry[i].receiver,masterBookRegistry[i].qty,masterBookRegistry[i].reward);
         }
         nBlocksRegistry[0] = nBlocksRegistry[0] + 1;
+        printf("blocco inserito\n");
         sem_post(semRegistry);
     }
     else
@@ -153,6 +154,7 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
     rewardTransaction(transactionBlock, nodePid);
     usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
     insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
+    free(transactionBlock);
 }
 
 void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, int res)
@@ -163,6 +165,7 @@ void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId
     messageReply->mtype = message->transaction.sender;
     messageReply->result = res;
     code = msgsnd(*msgTransactionReplyId, messageReply, sizeof(BufferTransactionReply), 0);
+    free(messageReply);
 }
 
 void* manageTransactions(void* args)
@@ -180,6 +183,8 @@ void* manageTransactions(void* args)
         if(checkTerminationNode() && nTerminatedUsers[0] == SO_USERS_NUM)
         {
             sem_post(arguments->semThread);
+            free(message);
+            free(args);
             pthread_exit(NULL);
         }
         else if(checkTerminationNode() && nTerminatedUsers[0] != SO_USERS_NUM)
@@ -247,6 +252,9 @@ void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgRe
     if(creationError)
     {
         printf("Errore nella creazione del thread gestore della transactionPool\n");
+        free(semThread);
+        free(transactionPool);
+        free(args);
         exit(EXIT_FAILURE);
     }
 

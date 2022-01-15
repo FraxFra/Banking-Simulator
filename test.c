@@ -200,6 +200,11 @@ void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* 
     }
 }
 
+void killProcesses()
+{
+
+}
+
 void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
     pid_t pid;
@@ -296,7 +301,7 @@ void* printStatus()
         }
         printf("----------------------------------\n" );
         sleep(1);
-        //system("clear");
+        system("clear");
     }
     pthread_exit(NULL);
 }
@@ -306,8 +311,8 @@ int setTermination()
     clock_t begin = clock();
     clock_t end;
     int res = -1;
-    pthread_t printThread[1];
-    pthread_create(&printThread[0], NULL, printStatus, NULL);
+    //pthread_t printThread[1];
+    //pthread_create(&printThread[0], NULL, printStatus, NULL);
 
     while(termination[0] == 1)
     {
@@ -362,6 +367,20 @@ void reasume(int terminationReason, int* msgReportNode)
     int i;
     int res;
 
+    if(masterBookRegistry != NULL && nBlocksRegistry != NULL)
+    {
+        for(i = 0; i < SO_USERS_NUM ; i++)
+        {
+            printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
+        }
+        printf("----------------------------------\n" );
+        for(i = 0; i < SO_NODES_NUM ; i++)
+        {
+            printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
+        }
+        printf("----------------------------------\n" );
+    }
+
     printf("----------------------------------\n" );
     switch(terminationReason)
     {
@@ -378,20 +397,6 @@ void reasume(int terminationReason, int* msgReportNode)
         break;
     }
     printf("----------------------------------\n" );
-
-    if(masterBookRegistry != NULL && nBlocksRegistry != NULL)
-    {
-        for(i = 0; i < SO_USERS_NUM ; i++)
-        {
-            printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
-        }
-        printf("----------------------------------\n" );
-        for(i = 0; i < SO_NODES_NUM ; i++)
-        {
-            printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
-        }
-        printf("----------------------------------\n" );
-    }
 
     printf("il numero di processi utente terminati prematuramente e' %d\n", nDeadUsers[0]);
     printf("----------------------------------\n" );
@@ -420,15 +425,15 @@ void masterStart()
     terminationReason = setTermination();
     while(wait(NULL) > 0);
     sleep(2);
-    reasume(terminationReason, &msgReportNode);
+    //reasume(terminationReason, &msgReportNode);
     deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
     unMapSharedMemory();
+    killProcesses();
     exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char const *argv[])
 {
-    //printf("Creazione del processo Master\n");
     pid_t pid = fork();
 
     if(pid == -1)
@@ -439,15 +444,11 @@ int main(int argc, char const *argv[])
     else if(pid == 0)
     {
         masterStart();
-        //printf("Il processo master e' terminato\n");
         exit(EXIT_SUCCESS);
     }
     else
     {
         while(wait(NULL) > 0);
-        //printf("Il processo Main e' terminato correttamente\n");
-        //TODO: deallocare tutte le risorse
         return 0;
     }
-    //TODO: creazione file di log
 }
