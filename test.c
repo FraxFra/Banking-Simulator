@@ -362,7 +362,7 @@ void* printStatus()
             printf("----------------------------------\n" );
         }
         sleep(1);
-        system("clear");
+        // system("clear");
     }
     pthread_exit(NULL);
 }
@@ -481,7 +481,7 @@ void reasume(int terminationReason, int* msgReportNode)
 
     /*for(i = 0; i < SO_BLOCK_SIZE * nBlocksRegistry[0]; i++)
     {
-        printf("%d %d %d\n", masterBookRegistry[i].timestamp, masterBookRegistry[i].sender, masterBookRegistry[i].receiver);
+        printf("%ld %d %d\n", masterBookRegistry[i].timestamp, masterBookRegistry[i].sender, masterBookRegistry[i].receiver);
     }*/
 }
 

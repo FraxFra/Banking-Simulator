@@ -31,13 +31,13 @@ void sendReportNode(Transaction* transactionPool, Transaction* transactionBlock,
 
     message->mtype = nodePid;
     message->nTransactions = 0;
-    /*for(j = 0; j < SO_TP_SIZE; j++)
+    for(j = 0; j < SO_TP_SIZE; j++)
     {
         if(transactionPool[j].timestamp != -1)
         {
             message->nTransactions += 1;
         }
-    }*/
+    }
 
     for(j = 0; j < SO_BLOCK_SIZE; j++)
     {
@@ -72,17 +72,17 @@ void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pi
     int actualTransactions = nBlocksRegistry[0] * SO_BLOCK_SIZE;
     if(actualTransactions != SO_BLOCK_SIZE * SO_REGISTRY_SIZE)
     {
+
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
         {
             //printf("%d\n",i);
-            //printf("%d\n", masterBookRegistry[i].qty);
             masterBookRegistry[i] = transactionBlock[j];
             transactionBlock[j].timestamp = -1;
             j++;
-
-
+            // printf("%d\n", masterBookRegistry[i].qty);
         }
         nBlocksRegistry[0] = nBlocksRegistry[0] + 1;
+        // printf("Sto inserendo un blocco %ld\n", transactionBlock[j].timestamp);
         //printf("blocco inserito %d\n %d\n",nBlocksRegistry[0],actualTransactions);
         sem_post(semRegistry);
     }
@@ -149,7 +149,7 @@ int checkTransactionRegistry(Transaction transaction)
 
 int chooseTransaction(Transaction* transactionPool, Transaction* transactionBlock, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
-    srand(time(NULL));
+    // srand(time(NULL));
     int i = rand() % SO_TP_SIZE;
     while(transactionPool[i].timestamp == -1)
     {
@@ -173,11 +173,13 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
     while(blockIdx < SO_BLOCK_SIZE - 1)
     {
         i = chooseTransaction(transactionPool, transactionBlock, nodePid, msgReportNode, semThread);
-        if (checkTransactionRegistry(transactionPool[i]) == 1 && checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock) == 1 && transactionPool[i].timestamp != -1 && transactionBlock[i].timestamp == -1)
+        // if (checkTransactionRegistry(transactionPool[i]) == 1 && checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock) == 1 && transactionPool[i].timestamp != -1 && transactionBlock[i].timestamp == -1)
+        if (checkTransactionRegistry(transactionPool[i]) == 1 && transactionPool[i].timestamp != -1 && transactionBlock[blockIdx].timestamp == -1)
         {
             transactionBlock[blockIdx] = transactionPool[i];
             transactionPool[i].timestamp = -1;
             blockIdx++;
+            // printf("Numero progressivo del transaction block %d\n", blockIdx);
         }
 
         if(checkTerminationNode())
@@ -187,6 +189,7 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
     }
     rewardTransaction(transactionBlock, nodePid);
     usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
+    // printf("Sto iniziando l'inserimento del blocco %ld\n", transactionBlock[blockIdx].timestamp);
     insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
 }
 

@@ -1,5 +1,10 @@
 #include "config.h"
 
+#define ARR_DIM 100
+
+int userBalance = SO_BUDGET_INIT;
+int masterBookIdx = 0;
+
 bool checkTerminationUser()
 {
     return termination[0] == 0;
@@ -42,12 +47,15 @@ void createTransaction(Transaction* t, pid_t userPid, int balance)
 {
     srand(userPid * time(NULL));
     int amount = (rand() % (balance-2+1))+2;
-    //printf("usr:%d balance:%d amount:%d\n", userPid,balance,amount);
+    // amount /= 10;
+    // printf("usr:%d balance:%d amount:%d\n", userPid,balance,amount);
     t->timestamp = clock();
     t->sender = userPid;
     t->receiver = findReceiver(userPid);
     t->reward = calcReward(amount);
     t->qty = amount - t->reward;
+    // printf("Balance corrente: %d\n", balance);
+    // sleep(3);
 }
 
 BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTransactionSendId)
@@ -83,7 +91,7 @@ void insertArrTransaction(Transaction* arrTransaction, BufferTransactionSend* me
     int i = 0;
     int findPlace = 1;
 
-    for(i = 0; i < 50; i++)
+    for(i = 0; i < ARR_DIM; i++)
     {
         if(arrTransaction[i].timestamp == -1 && findPlace == 1)
         {
@@ -100,25 +108,28 @@ void insertArrTransaction(Transaction* arrTransaction, BufferTransactionSend* me
 void initArrTransaction(Transaction* arrTransaction)
 {
     int i;
-    for(i = 0; i < 50; i++)
+    for(i = 0; i < ARR_DIM; i++)
     {
         arrTransaction[i].timestamp = -1;
     }
 }
 
-int calcBalance(Transaction* arrTransaction, pid_t userPid)
+// int calcBalance(Transaction* arrTransaction, pid_t userPid)
+void calcBalance(Transaction* arrTransaction, pid_t userPid)
 {
-    int res = SO_BUDGET_INIT;
+  // int res = SO_BUDGET_INIT;
+    int res = userBalance;
     int i = 0;
     int j = 0;
 
     sem_wait(semRegistry);
-    for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
+    // for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
+    for(i = masterBookIdx; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
     {
         if(masterBookRegistry[i].sender == userPid)
         {
-            res = res - masterBookRegistry[i].qty - masterBookRegistry[i].reward;
-            for(j = 0; j < 50; j++)
+            // res = res - masterBookRegistry[i].qty - masterBookRegistry[i].reward;
+            for(j = 0; j < ARR_DIM; j++)
             {
                 if(masterBookRegistry[i].timestamp == arrTransaction[j].timestamp
                 && masterBookRegistry[i].receiver == arrTransaction[j].receiver
@@ -132,7 +143,7 @@ int calcBalance(Transaction* arrTransaction, pid_t userPid)
         if(masterBookRegistry[i].receiver == userPid)
         {
             res = res + masterBookRegistry[i].qty;
-            for(j = 0; j < 50; j++)
+            for(j = 0; j < ARR_DIM; j++)
             {
                 if(masterBookRegistry[i].timestamp == arrTransaction[j].timestamp
                 && masterBookRegistry[i].receiver == arrTransaction[j].receiver
@@ -144,7 +155,7 @@ int calcBalance(Transaction* arrTransaction, pid_t userPid)
         }
     }
 
-    for(j = 0; j < 50; j++)
+    for(j = 0; j < ARR_DIM; j++)
     {
         if(arrTransaction[j].timestamp != -1)
         {
@@ -154,8 +165,13 @@ int calcBalance(Transaction* arrTransaction, pid_t userPid)
             }
         }
     }
+
     sem_post(semRegistry);
-    return res;
+    masterBookIdx = nBlocksRegistry[0] * SO_BLOCK_SIZE;
+    userBalance = res;
+    // printf("%d\n",userBalance);
+    // sleep(2);
+    // return res;
 }
 
 void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
@@ -163,7 +179,7 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     pid_t userPid = getpid();
     int actual_retry = 0;
     int balance = 0;
-    Transaction* arrTransaction = (Transaction*)malloc(sizeof(Transaction) * 50);
+    Transaction* arrTransaction = (Transaction*)malloc(sizeof(Transaction) * ARR_DIM);
     BufferTransactionSend* message;
     initArrTransaction(arrTransaction);
 
@@ -178,25 +194,32 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
             exit(EXIT_SUCCESS);
         }
 
-        balance = calcBalance(arrTransaction, userPid);
-        if(balance >= 2)
+        // balance = calcBalance(arrTransaction, userPid);
+        calcBalance(arrTransaction, userPid);
+        // if(balance >= 2)
+        if(userBalance >= 2)
         {
-            message = sendTransaction(userPid, balance, msgTransactionSendId);
+          // message = sendTransaction(userPid, balance, msgTransactionSendId);
+            message = sendTransaction(userPid, userBalance, msgTransactionSendId);
             if(getTransactionReply(userPid, msgTransactionReplyId, message->mtype) == 1)
             {
                 actual_retry++;
             }
             else
             {
+                // printf("prima di decremento balance %d %d\n",userPid,userBalance);
+                userBalance -= message->transaction.qty + message->transaction.reward;
+                // printf("balance %d %d\n",userPid,userBalance);
                 actual_retry = 0;
                 insertArrTransaction(arrTransaction, message);
             }
         }
         else
         {
+            // printf("balance %d %d\n",userPid,userBalance);
             sleep(1);
         }
-        //printf("balance %d %d\n",userPid,balance);
+        // printf("balance %d %d\n",userPid,balance);
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     }
 
