@@ -61,8 +61,8 @@ BufferTransactionSend* sendTransaction(pid_t userPid, int balance, int* msgTrans
     message->transaction = *t;
     code = msgsnd(*msgTransactionSendId, message, sizeof(BufferTransactionSend), 0);
     //printf("Ho inviato %d balance: %d qty:%d\n",userPid,balance,t->qty);
-    //free(t);
-    //free(message);
+    free(t);
+    free(message);
     return message;
 }
 
@@ -171,11 +171,10 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     {
         if(checkTerminationUser())
         {
-            //free(arrTransaction);
+            free(arrTransaction);
             sem_wait(semDeadUsers);
             nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
             sem_post(semDeadUsers);
-            printf("utente LA MOOORTEEE\n");
             exit(EXIT_SUCCESS);
         }
 
@@ -193,11 +192,11 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
                 insertArrTransaction(arrTransaction, message);
             }
         }
-        else{
-            //printf("balance %d %d\n",userPid,balance);
+        else
+        {
             sleep(1);
         }
-        //free(message);
+        //printf("balance %d %d\n",userPid,balance);
         usleep((rand() % SO_MAX_TRANS_GEN_NSEC + SO_MIN_TRANS_GEN_NSEC) / 1000);
     }
 
@@ -206,7 +205,6 @@ void userStart(int* msgTransactionSendId, int* msgTransactionReplyId)
     nDeadUsers[0] = nDeadUsers[0] + 1;
     nTerminatedUsers[0] = nTerminatedUsers[0] + 1;
     sem_post(semDeadUsers);
-    printf("utente LA MOOORTEEE\n");
     exit(EXIT_SUCCESS);
 
 

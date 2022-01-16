@@ -283,6 +283,58 @@ int printBalanceUser(pid_t pid)
     return res;
 }
 
+void printMinMaxBalances()
+{
+    int i;
+    pid_t maxUser;
+    pid_t minUser;
+    pid_t maxNode;
+    pid_t minNode;
+    int maxUserBalance = 0;
+    int maxNodeBalance = 0;
+    int minUserBalance = INT_MAX;
+    int minNodeBalance = INT_MAX;
+    int curBalance;
+
+    for(i = 0; i < SO_USERS_NUM; i++)
+    {
+        curBalance = printBalanceUser(userProcesses[i]);
+        if(curBalance > maxUserBalance)
+        {
+            maxUserBalance = curBalance;
+            maxUser = userProcesses[i];
+        }
+
+        if(curBalance < minUserBalance)
+        {
+            minUserBalance = curBalance;
+            minUser = userProcesses[i];
+        }
+    }
+
+    for(i = 0; i < SO_NODES_NUM; i++)
+    {
+        curBalance = printBalanceUser(nodeProcesses[i]);
+        if(curBalance > maxNodeBalance)
+        {
+            maxNodeBalance = curBalance;
+            maxNode = nodeProcesses[i];
+        }
+
+        if(curBalance < minNodeBalance)
+        {
+            minNodeBalance = curBalance;
+            minNode = nodeProcesses[i];
+        }
+    }
+
+    printf("L'utente %d ha il bilancio maggiore pari a %d\n", maxUser, maxUserBalance);
+    printf("L'utente %d ha il bilancio minore pari a %d\n", minUser, minUserBalance);
+    printf("----------------------------------\n" );
+    printf("Il nodo %d ha il bilancio maggiore pari a %d\n", maxNode, maxNodeBalance);
+    printf("Il nodo %d ha il bilancio minore pari a %d\n", minNode, minNodeBalance);
+}
+
 void* printStatus()
 {
     while(termination[0] == 1)
@@ -292,18 +344,25 @@ void* printStatus()
         printf("----------------------------------\n" );
         printf("numero di utenti attivi: %d\n", SO_USERS_NUM - nDeadUsers[0]);
         printf("----------------------------------\n" );
-        for(i = 0; i < SO_USERS_NUM ; i++)
+        if(SO_USERS_NUM > 10 || SO_NODES_NUM > 10)
         {
-            printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
+            printMinMaxBalances();
         }
-        printf("----------------------------------\n" );
-        for(i = 0; i < SO_NODES_NUM ; i++)
+        else
         {
-            printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
+            for(i = 0; i < SO_USERS_NUM ; i++)
+            {
+                printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
+            }
+            printf("----------------------------------\n" );
+            for(i = 0; i < SO_NODES_NUM ; i++)
+            {
+                printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
+            }
+            printf("----------------------------------\n" );
         }
-        printf("----------------------------------\n" );
         sleep(1);
-        //system("clear");
+        system("clear");
     }
     pthread_exit(NULL);
 }
@@ -340,7 +399,6 @@ int setTermination()
             }
         }
     }
-    printf("finito\n");
     return res;
 }
 
@@ -372,25 +430,32 @@ void reasume(int terminationReason, int* msgReportNode)
     int i;
     int res;
 
-    if(masterBookRegistry != NULL && nBlocksRegistry != NULL)
+    if(SO_USERS_NUM > 10 || SO_NODES_NUM > 10)
     {
-        for(i = 0; i < SO_USERS_NUM ; i++)
+        printMinMaxBalances();
+    }
+    else
+    {
+        if(masterBookRegistry != NULL && nBlocksRegistry != NULL)
         {
-            printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
+            for(i = 0; i < SO_USERS_NUM ; i++)
+            {
+                printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
+            }
+            printf("----------------------------------\n" );
+            for(i = 0; i < SO_NODES_NUM ; i++)
+            {
+                printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
+            }
+            printf("----------------------------------\n" );
         }
-        printf("----------------------------------\n" );
-        for(i = 0; i < SO_NODES_NUM ; i++)
-        {
-            printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
-        }
-        printf("----------------------------------\n" );
     }
 
     printf("----------------------------------\n" );
     switch(terminationReason)
     {
         case 0:
-        printf("Il programma e' terminato per mancanza di tempo\n" );
+        printf("Il programma e' terminato per fine tempo di esecuzione\n" );
         break;
 
         case 1:
@@ -402,7 +467,6 @@ void reasume(int terminationReason, int* msgReportNode)
         break;
     }
     printf("----------------------------------\n" );
-
     printf("il numero di processi utente terminati prematuramente e' %d\n", nDeadUsers[0]);
     printf("----------------------------------\n" );
     printf("il numero di blocchi nel libro mastro e' %d\n", nBlocksRegistry[0]);
@@ -414,6 +478,11 @@ void reasume(int terminationReason, int* msgReportNode)
         printf("il nodo %ld ha %d transazioni rimanenti nella transactionPool\n", message->mtype, message->nTransactions);
     }
     printf("----------------------------------\n" );
+
+    /*for(i = 0; i < SO_BLOCK_SIZE * nBlocksRegistry[0]; i++)
+    {
+        printf("%d %d %d\n", masterBookRegistry[i].timestamp, masterBookRegistry[i].sender, masterBookRegistry[i].receiver);
+    }*/
 }
 
 void masterStart()
@@ -429,6 +498,7 @@ void masterStart()
     createProcesses(masterPid, &msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
     terminationReason = setTermination();
     while(wait(NULL) > 0);
+    printf("Fine simulazione\n");
     sleep(2);
     reasume(terminationReason, &msgReportNode);
     deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
