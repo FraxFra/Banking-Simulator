@@ -10,6 +10,20 @@ int* nDeadUsers;
 int* nTerminatedUsers;
 int* termination;
 
+void assertParameters()
+{
+    assert(SO_USERS_NUM >= 2);
+    assert(SO_NODES_NUM >= 1);
+    assert(SO_BUDGET_INIT >= 2);
+    assert(SO_REWARD >= 0 && SO_REWARD <= 100);
+    assert(SO_MIN_TRANS_GEN_NSEC >= 1 && SO_MAX_TRANS_GEN_NSEC >= 1);
+    assert(SO_RETRY >= 0);
+    assert(SO_TP_SIZE >= 1);
+    assert(SO_BLOCK_SIZE >= 2);
+    assert(SO_MIN_TRANS_PROC_NSEC >= 1 && SO_MAX_TRANS_PROC_NSEC >= 1);
+    assert(SO_REGISTRY_SIZE >= 1);
+    assert(SO_SIM_SEC >= 1);
+}
 
 void mapSharedMemory()
 {
@@ -495,6 +509,7 @@ void masterStart()
     int msgReportNode;
     int terminationReason;
 
+    assertParameters();
     mapSharedMemory();
     initBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
     createProcesses(masterPid, &msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
