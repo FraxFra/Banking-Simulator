@@ -334,12 +334,13 @@ void printMinMaxBalances()
             minNode = nodeProcesses[i];
         }
     }
-
+    printf("-------------------------------------------------------------------\n" );
     printf("L'utente %d ha il bilancio maggiore pari a %d\n", maxUser, maxUserBalance);
     printf("L'utente %d ha il bilancio minore pari a %d\n", minUser, minUserBalance);
-    printf("----------------------------------\n" );
+    printf("-------------------------------------------------------------------\n" );
     printf("Il nodo %d ha il bilancio maggiore pari a %d\n", maxNode, maxNodeBalance);
     printf("Il nodo %d ha il bilancio minore pari a %d\n", minNode, minNodeBalance);
+    printf("-------------------------------------------------------------------\n" );
 }
 
 void* printStatus()
@@ -348,9 +349,9 @@ void* printStatus()
     {
         int i, j;
 
-        printf("----------------------------------\n" );
+        printf("-------------------------------------------------------------------\n" );
         printf("numero di utenti attivi: %d\n", SO_USERS_NUM - nDeadUsers[0]);
-        printf("----------------------------------\n" );
+
         if(SO_USERS_NUM > 10 || SO_NODES_NUM > 10)
         {
             printMinMaxBalances();
@@ -361,12 +362,12 @@ void* printStatus()
             {
                 printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
             }
-            printf("----------------------------------\n" );
+            printf("-------------------------------------------------------------------\n" );
             for(i = 0; i < SO_NODES_NUM ; i++)
             {
                 printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
             }
-            printf("----------------------------------\n" );
+            printf("-------------------------------------------------------------------\n" );
         }
         sleep(1);
         system("clear");
@@ -444,20 +445,20 @@ void reasume(int terminationReason, int* msgReportNode)
     {
         if(masterBookRegistry != NULL && nBlocksRegistry != NULL)
         {
+            printf("-------------------------------------------------------------------\n" );
             for(i = 0; i < SO_USERS_NUM ; i++)
             {
                 printf("utente %d ha bilancio pari a %d\n", userProcesses[i], printBalanceUser(userProcesses[i]));
             }
-            printf("----------------------------------\n" );
+            printf("-------------------------------------------------------------------\n" );
             for(i = 0; i < SO_NODES_NUM ; i++)
             {
                 printf("nodo %d ha bilancio pari a %d\n", nodeProcesses[i], printBalanceNode(nodeProcesses[i]));
             }
-            printf("----------------------------------\n" );
+            printf("-------------------------------------------------------------------\n" );
         }
     }
 
-    printf("----------------------------------\n" );
     switch(terminationReason)
     {
         case 0:
@@ -472,18 +473,18 @@ void reasume(int terminationReason, int* msgReportNode)
         printf("Il programma e' terminato a causa della terminazione di tutti gli utenti\n" );
         break;
     }
-    printf("----------------------------------\n" );
+    printf("-------------------------------------------------------------------\n" );
     printf("il numero di processi utente terminati prematuramente e' %d\n", nDeadUsers[0]);
-    printf("----------------------------------\n" );
+    printf("-------------------------------------------------------------------\n" );
     printf("il numero di blocchi nel libro mastro e' %d\n", nBlocksRegistry[0]);
-    printf("----------------------------------\n" );
+    printf("-------------------------------------------------------------------\n" );
 
     for(i = 0; i < SO_NODES_NUM; i++)
     {
         msgrcv(*msgReportNode, message, sizeof(BufferReportNode), 0, 0);
         printf("il nodo %ld ha %d transazioni rimanenti nella transactionPool\n", message->mtype, message->nTransactions);
     }
-    printf("----------------------------------\n" );
+    printf("-------------------------------------------------------------------\n" );
 }
 
 void masterStart()
