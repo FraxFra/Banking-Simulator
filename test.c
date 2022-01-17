@@ -200,11 +200,6 @@ void deallocBuffers(int* msgTransactionSendId, int* msgTransactionReplyId, int* 
     }
 }
 
-void killProcesses()
-{
-
-}
-
 void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
 {
     pid_t pid;
@@ -247,13 +242,26 @@ void createProcesses(pid_t masterPid, int* msgTransactionSendId, int* msgTransac
     }
 }
 
+void killProcesses()
+{
+    int i;
+    for(i = 0; i < SO_USERS_NUM; i++)
+    {
+        kill(userProcesses[i], SIGKILL);
+    }
+    for(i = 0; i < SO_NODES_NUM; i++)
+    {
+        kill(nodeProcesses[i], SIGKILL);
+    }
+}
+
 int printBalanceNode(pid_t pid)
 {
 
     int res = 0;
     int i;
 
-    for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i++)
+    for(i = 0 + SO_BLOCK_SIZE - 1; i < nBlocksRegistry[0] * SO_BLOCK_SIZE; i = i + SO_BLOCK_SIZE)
     {
         if(masterBookRegistry[i].sender == -1 && pid == masterBookRegistry[i].receiver)
         {
@@ -278,7 +286,6 @@ int printBalanceUser(pid_t pid)
         {
             res = res + masterBookRegistry[i].qty;
         }
-        //printf("%d\n",masterBookRegistry[i].qty);
     }
     return res;
 }
@@ -362,7 +369,7 @@ void* printStatus()
             printf("----------------------------------\n" );
         }
         sleep(1);
-        // system("clear");
+        system("clear");
     }
     pthread_exit(NULL);
 }
@@ -377,7 +384,6 @@ int setTermination()
 
     while(termination[0] == 1)
     {
-      //printf("sono verso la fine %d %d\n",nBlocksRegistry[0],termination[0]);
         end = clock();
         if(((double)(end - begin) / CLOCKS_PER_SEC) >= SO_SIM_SEC && res == -1)
         {
@@ -478,11 +484,6 @@ void reasume(int terminationReason, int* msgReportNode)
         printf("il nodo %ld ha %d transazioni rimanenti nella transactionPool\n", message->mtype, message->nTransactions);
     }
     printf("----------------------------------\n" );
-
-    /*for(i = 0; i < SO_BLOCK_SIZE * nBlocksRegistry[0]; i++)
-    {
-        printf("%ld %d %d\n", masterBookRegistry[i].timestamp, masterBookRegistry[i].sender, masterBookRegistry[i].receiver);
-    }*/
 }
 
 void masterStart()
@@ -499,11 +500,12 @@ void masterStart()
     terminationReason = setTermination();
     while(wait(NULL) > 0);
     printf("Fine simulazione\n");
+    assert(checkDuplicates() == 1);
     sleep(2);
     reasume(terminationReason, &msgReportNode);
+    killProcesses();
     deallocBuffers(&msgTransactionSendId, &msgTransactionReplyId, &msgReportNode);
     unMapSharedMemory();
-    killProcesses();
     exit(EXIT_SUCCESS);
 }
 

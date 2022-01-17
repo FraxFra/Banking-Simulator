@@ -23,6 +23,15 @@ void initTransactionBlock(Transaction* transactionBlock)
     }
 }
 
+void initArgs(PthreadArguments* args, pid_t nodePid, Transaction* transactionPool, int* msgTransactionSendId, int* msgTransactionReplyId, sem_t* semThread)
+{
+    args->nodePid = nodePid;
+    args->transactionPool = transactionPool;
+    args->msgTransactionSendId = msgTransactionSendId;
+    args->msgTransactionReplyId = msgTransactionReplyId;
+    args->semThread = semThread;
+}
+
 void sendReportNode(Transaction* transactionPool, Transaction* transactionBlock, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
     int code;
@@ -57,7 +66,6 @@ void sendReportNode(Transaction* transactionPool, Transaction* transactionBlock,
     sem_post(semThread);
     free(message);
     free(transactionPool);
-    free(transactionBlock);
     free(semThread);
     exit(EXIT_SUCCESS);
 }
@@ -66,7 +74,6 @@ void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pi
 {
     int i;
     int j = 0;
-    int z;
 
     sem_wait(semRegistry);
     int actualTransactions = nBlocksRegistry[0] * SO_BLOCK_SIZE;
@@ -75,15 +82,11 @@ void insertBlock(Transaction* transactionBlock, Transaction* transactionPool, pi
 
         for(i = actualTransactions; i < actualTransactions + SO_BLOCK_SIZE; i++)
         {
-            //printf("%d\n",i);
             masterBookRegistry[i] = transactionBlock[j];
             transactionBlock[j].timestamp = -1;
             j++;
-            // printf("%d\n", masterBookRegistry[i].qty);
         }
         nBlocksRegistry[0] = nBlocksRegistry[0] + 1;
-        // printf("Sto inserendo un blocco %ld\n", transactionBlock[j].timestamp);
-        //printf("blocco inserito %d\n %d\n",nBlocksRegistry[0],actualTransactions);
         sem_post(semRegistry);
     }
     else
@@ -135,6 +138,7 @@ int checkTransactionRegistry(Transaction transaction)
     int i;
     int res = 1;
 
+    sem_wait(semRegistry);
     for(i = 0; i < nBlocksRegistry[0] * SO_BLOCK_SIZE ; i++)
     {
         if(masterBookRegistry[i].timestamp == transaction.timestamp
@@ -144,12 +148,12 @@ int checkTransactionRegistry(Transaction transaction)
             res = 0;
         }
     }
+    sem_post(semRegistry);
     return res;
 }
 
 int chooseTransaction(Transaction* transactionPool, Transaction* transactionBlock, pid_t nodePid, int* msgReportNode, sem_t* semThread)
 {
-    // srand(time(NULL));
     int i = rand() % SO_TP_SIZE;
     while(transactionPool[i].timestamp == -1)
     {
@@ -159,7 +163,6 @@ int chooseTransaction(Transaction* transactionPool, Transaction* transactionBloc
         }
         i = rand() % SO_TP_SIZE;
     }
-    //printf("%d\n", i);
     return i;
 }
 
@@ -173,13 +176,11 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
     while(blockIdx < SO_BLOCK_SIZE - 1)
     {
         i = chooseTransaction(transactionPool, transactionBlock, nodePid, msgReportNode, semThread);
-        // if (checkTransactionRegistry(transactionPool[i]) == 1 && checkTransactionBlock(transactionPool[i],blockIdx,transactionBlock) == 1 && transactionPool[i].timestamp != -1 && transactionBlock[i].timestamp == -1)
         if (checkTransactionRegistry(transactionPool[i]) == 1 && transactionPool[i].timestamp != -1 && transactionBlock[blockIdx].timestamp == -1)
         {
             transactionBlock[blockIdx] = transactionPool[i];
             transactionPool[i].timestamp = -1;
             blockIdx++;
-            // printf("Numero progressivo del transaction block %d\n", blockIdx);
         }
 
         if(checkTerminationNode())
@@ -189,8 +190,8 @@ void createBlock(Transaction* transactionPool, pid_t nodePid, int* msgReportNode
     }
     rewardTransaction(transactionBlock, nodePid);
     usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
-    // printf("Sto iniziando l'inserimento del blocco %ld\n", transactionBlock[blockIdx].timestamp);
     insertBlock(transactionBlock, transactionPool, nodePid, msgReportNode, semThread, msgReportNode);
+    free(transactionBlock);
 }
 
 void replyTransaction(BufferTransactionSend* message, int* msgTransactionReplyId, int res)
@@ -223,7 +224,7 @@ void* manageTransactions(void* args)
             free(args);
             pthread_exit(NULL);
         }
-        else if(checkTerminationNode() && nTerminatedUsers[0] != SO_USERS_NUM)
+        else if(checkTerminationNode() && nTerminatedUsers[0] != SO_USERS_NUM && code == -1)
         {
             usleep((rand() % SO_MAX_TRANS_PROC_NSEC + SO_MIN_TRANS_PROC_NSEC) / 1000);
         }
@@ -249,15 +250,6 @@ void* manageTransactions(void* args)
             }
         }
     }
-}
-
-void initArgs(PthreadArguments* args, pid_t nodePid, Transaction* transactionPool, int* msgTransactionSendId, int* msgTransactionReplyId, sem_t* semThread)
-{
-    args->nodePid = nodePid;
-    args->transactionPool = transactionPool;
-    args->msgTransactionSendId = msgTransactionSendId;
-    args->msgTransactionReplyId = msgTransactionReplyId;
-    args->semThread = semThread;
 }
 
 void nodeStart(int* msgTransactionSendId, int* msgTransactionReplyId, int* msgReportNode)
