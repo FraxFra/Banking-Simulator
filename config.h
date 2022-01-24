@@ -16,6 +16,8 @@
 #include <sys/ipc.h>
 #include <assert.h>
 
+#define _GNU_SOURCE
+
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
